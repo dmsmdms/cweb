@@ -1,0 +1,152 @@
+mainmenu "CWeb"
+
+choice
+    prompt "Build"
+
+    config BUILD_DEBUG
+        bool "Debug"
+    config BUILD_RELEASE
+        bool "Release"
+endchoice
+
+menu "Application"
+    config APP_BOT_ADMIN
+        bool "Bot admin"
+        select TELEBOT
+        select DB_BOT_TABLE
+
+    if APP_BOT_ADMIN
+        menu "Bot Admin Features"
+            config BOT_ADMIN_CRYPTO_PARSER
+                bool "Crypto parser control"
+                select IPC_CRYPTO_PARSER_CLIENT
+        endmenu
+    endif
+
+    config APP_JOBLY_PARSER
+        bool "Jobly parser"
+        select PARSER_CVBANKAS
+
+    config APP_CRYPTO_PARSER
+        bool "Crypto parser"
+        select PARSER_BINANCE
+        select IPC_CRYPTO_PARSER_SERVER
+
+    config APP_CRYPTO_TRAIN
+        bool "Crypto AI training model"
+        select AI_CRYPTO_TRAIN
+
+    config APP_CRYPTO_BOT_NOTIFY
+        bool "Crypto bot notifications"
+        select TELEBOT
+        select DB_BOT_TABLE
+endmenu
+
+menu "Core"
+    config HTTP_CLIENT
+        bool "HTTP Client"
+        default n
+
+    config HTTP_SERVER
+        bool "HTTP Server"
+        default n
+
+    config WS_CLIENT
+        bool "WebSocket Client"
+        default n
+
+    config DB
+        bool "Database support"
+        default n
+
+    config HTML_PARSER
+        bool "HTML parser"
+        default n
+
+    config TELEBOT
+        bool "Telegram bot support"
+        select HTTP_CLIENT
+        default n
+
+    config LANG
+        bool "Language support"
+        default n
+
+    config IPC_CLIENT
+        bool "Inter-process communication client"
+        default n
+
+    config IPC_SERVER
+        bool "Inter-process communication server"
+        default n
+
+    config AI_GBOOST
+        bool "AI gradient boost support"
+        default n
+endmenu
+
+menu "Database"
+    config DB_JOB_TABLE
+        bool "Job table"
+        select DB
+        default n
+
+    config DB_CRYPTO_TABLE
+        bool "Crypto table"
+        select DB
+        default n
+
+    config DB_BOT_TABLE
+        bool "Bot table"
+        select DB
+        default n
+endmenu
+
+menu "IPC"
+    config IPC_CRYPTO_PARSER_CLIENT
+        bool "Crypto parser IPC client"
+        select IPC_CLIENT
+        default n
+
+    config IPC_CRYPTO_PARSER_SERVER
+        bool "Crypto parser IPC"
+        select PARSER_BINANCE
+        select IPC_SERVER
+        default n
+endmenu
+
+menu "Parser"
+    config PARSER_CVBANKAS
+        bool "CvBankas site parser"
+        select HTTP_CLIENT
+        select HTML_PARSER
+        select DB_JOB_TABLE
+        default n
+
+    config PARSER_BINANCE
+        bool "Binance parser"
+        select WS_CLIENT
+        select DB_CRYPTO_TABLE
+        default n
+endmenu
+
+menu "Calc"
+    config CALC_CRYPTO
+        bool "Crypto calculations"
+        select DB_CRYPTO_TABLE
+        default n
+endmenu
+
+menu "AI"
+    config AI_CRYPTO_TRAIN
+            bool "Crypto AI training"
+            select AI_GBOOST
+            select CALC_CRYPTO
+            default n
+endmenu
+
+menu "HTML"
+    config HTML_CRYPTO
+        bool "Crypto HTML frontend"
+        default n
+endmenu
