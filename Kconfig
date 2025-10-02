@@ -1,0 +1,107 @@
+mainmenu "CWeb"
+
+choice
+    prompt "Build"
+
+    config BUILD_DEBUG
+        bool "Debug"
+    config BUILD_RELEASE
+        bool "Release"
+endchoice
+
+menu "Application"
+    config APP_JOBLY_API
+        bool "Jobly API"
+        select HTTP_SERVER
+        select LANG
+        select DB_JOB_TABLE
+
+    config APP_JOBLY_PARSER
+        bool "Jobly parser"
+        select PARSER_CVBANKAS
+
+    config APP_JOBLY_BOT
+        bool "Jobly bot"
+        select TELEBOT
+        select LANG
+        select DB_JOB_TABLE
+
+    config APP_CRYPTO_PARSER
+        bool "Crypto parser"
+        select PARSER_BINANCE
+
+    config APP_CRYPTO_API
+        bool "Crypto API"
+        select HTTP_SERVER
+        select HTML_CRYPTO
+        select DB_CRYPTO_TABLE
+
+    config APP_CRYPTO
+        bool "Crypto (all-in-one)"
+        select APP_CRYPTO_PARSER
+        select APP_CRYPTO_API
+endmenu
+
+menu "Core"
+    config HTTP_CLIENT
+        bool "HTTP Client"
+        default n
+
+    config HTTP_SERVER
+        bool "HTTP Server"
+        default n
+
+    config WS_CLIENT
+        bool "WebSocket Client"
+        default n
+
+    config DB
+        bool "Database support"
+        default n
+
+    config HTML_PARSER
+        bool "HTML parser"
+        default n
+
+    config TELEBOT
+        bool "Telegram bot support"
+        select HTTP_CLIENT
+        default n
+
+    config LANG
+        bool "Language support"
+        default n
+endmenu
+
+menu "Database"
+    config DB_JOB_TABLE
+        bool "Job table"
+        select DB
+        default n
+
+    config DB_CRYPTO_TABLE
+        bool "Crypto table"
+        select DB
+        default n
+endmenu
+
+menu "Parser"
+    config PARSER_CVBANKAS
+        bool "CvBankas site parser"
+        select HTTP_CLIENT
+        select HTML_PARSER
+        select DB_JOB_TABLE
+        default n
+
+    config PARSER_BINANCE
+        bool "Binance parser"
+        select WS_CLIENT
+        select DB_CRYPTO_TABLE
+        default n
+endmenu
+
+menu "HTML"
+    config HTML_CRYPTO
+        bool "Crypto HTML frontend"
+        default n
+endmenu

@@ -1,0 +1,68 @@
+{
+    "Language-Select": {
+        "ru": "Выберите язык 👇",
+        "en": "Select language 👇",
+        "lt": "Pasirinkite kalbą 👇",
+        "uk": "Оберіть мову 👇"
+    },
+    "Context-None-Resp": {
+        "ru": "Хмм. И что мне с этим делать? 🤔",
+        "en": "Hmm. What should I do about this? 🤔",
+        "lt": "Hmm. Ką turėčiau dėl to daryti? 🤔",
+        "uk": "Хмм. І що мені робити з цим? 🤔"
+    },
+    "Language-Native": {
+        "ru": "🇷🇺 Русский",
+        "en": "🇬🇧 English",
+        "lt": "🇱🇹 Lietuvių",
+        "uk": "🇺🇦 Українська"
+    },
+    "Start-Job": {
+        "ru": "Привет! Я тут чтобы помочь вам найти работу вашей мечты) Чтобы поиск шёл максимально эффективно, могу я задать пару вопросов?",
+        "en": "Hi! I'm here to help you find your dream job. To make your search as efficient as possible, can I ask you a few questions?",
+        "lt": "Sveiki! Esu čia, kad padėčiau jums rasti svajonių darbą. Kad jūsų paieška būtų kuo efektyvesnė, ar galiu užduoti jums keletą klausimų?",
+        "uk": "Привіт! Я тут, щоб допомогти вам знайти роботу вашої мрії) Щоб пошук йшов максимально ефективно, можу я поставити пару запитань?"
+    },
+    "Select-From-Keyboard": {
+        "ru": "Пожалуйста, выберете один из вариантов 👇",
+        "en": "Please select one of the options 👇",
+        "lt": "Pasirinkite vieną iš variantų 👇",
+        "uk": "Будь ласка, оберіть один із варіантів 👇"
+    },
+    "Share-Location": {
+        "ru": "📍 Отправить локацию",
+        "en": "📍 Submit location",
+        "lt": "📍 Pateikite vietą",
+        "uk": "📍 Надіслати локацію"
+    },
+    "Cancel": {
+        "ru": "🙅 Отмена",
+        "en": "🙅 Cancel",
+        "lt": "🙅 Atšaukti",
+        "uk": "🙅 Скасування"
+    },
+    "Ask-Location": {
+        "ru": "Укажите локацию",
+        "en": "Specify the location",
+        "lt": "Nurodykite vietą",
+        "uk": "Вкажіть локацію"
+    },
+    "Search-Filter": {
+        "ru": "🔎 Поисковый фильтр",
+        "en": "🔎 Search filter",
+        "lt": "🔎 Paieškos filtras",
+        "uk": "🔎 Пошуковий фільтр"
+    },
+    "List-Show": {
+        "ru": "Я нашёл для вас %d вакансий. Показать?\nНастройте поисковый фильтр, чтобы сократить количество вариантов",
+        "en": "I found %d job openings for you. Show?\nAdjust your search filter to narrow down your results",
+        "lt": "Radau %d jums tinkamų darbo pasiūlymų. Rodyti?\nPakoreguokite paieškos filtrą, kad susiaurintumėte rezultatus",
+        "uk": "Я знайшов вам %d вакансій. Показати?\nНалаштуйте пошуковий фільтр, щоб зменшити кількість варіантів"
+    },
+    "Title": {
+        "ru": "Название",
+        "en": "",
+        "lt": "",
+        "uk": ""
+    }
+}
