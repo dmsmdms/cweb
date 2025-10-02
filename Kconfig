@@ -1,0 +1,74 @@
+mainmenu "CWeb"
+
+choice
+    prompt "Build"
+
+    config BUILD_DEBUG
+        bool "Debug"
+    config BUILD_RELEASE
+        bool "Release"
+endchoice
+
+menu "Core"
+    config HTTP_CLIENT
+        bool "Enable HTTP Client"
+        default n
+        help
+            This option enables the HTTP client functionality through libcurl.
+            It allows the application to make asynchronous HTTP requests
+
+    config HTTP_SERVER
+        bool "Enable HTTP Server"
+        default n
+        help
+            This option enables the built-in HTTP server functionality with picohttpparser.
+            It allows the application to work as a backend for site
+
+    config DB
+        bool "Enable database support"
+        default n
+        help
+            This option enables the LMDB database support.
+            It allows the application to store and retrieve data from a local database
+
+    config HTML_PARSER
+        bool "Enable HTML parser"
+        default n
+        help
+            This option enables the HTML parsing functionality through Gumbo-parser.
+            It allows the application to parse and manipulate HTML content
+
+    config TELEBOT
+        bool "Enable Telegram bot support"
+        select HTTP_CLIENT
+        default n
+        help
+            This option enables the Telegram bot functionality through telebot-async.
+            It allows the application to interact with the Telegram Bot API
+endmenu
+
+menu "Database"
+    config DB_JOB_TABLE
+        bool "Enable job table"
+        select DB
+        default n
+endmenu
+
+menu "Parser"
+    config PARSER_CVBANKAS
+        bool "Enable cvbankas.lt site parser"
+        select HTTP_CLIENT
+        select HTML_PARSER
+        select DB_JOB_TABLE
+        default n
+endmenu
+
+menu "Application"
+    config APP_JOBLY
+        bool "Enable jobly.lt"
+        select TELEBOT
+        select HTTP_SERVER
+        select PARSER_CVBANKAS
+        select DB_JOB_TABLE
+        default n
+endmenu
