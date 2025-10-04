@@ -1,6 +1,6 @@
 # Compiler
 CC := gcc
-CFLAGS := -Wall -Wextra -O2 -I/usr/include/json-c -g -Og -fsanitize=address,undefined,thread,memory,leak
+CFLAGS := -Wall -Wextra -O2 -I/usr/include/json-c -g -Og -fsanitize=address,undefined,leak
 CFLAGS := $(CFLAGS) -Iinclude
 
 # Directories

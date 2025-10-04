@@ -145,7 +145,8 @@ static int multi_timer_cb(CURLM *multi, long timeout_ms, void *app_data)
 
     ev_timer_stop(app->loop, &http->timer);
     if(timeout_ms >= 0) {
-        ev_timer_set(&http->timer, (timeout_ms / 1000), 0);
+        ev_timer_init(&http->timer, timer_cb, timeout_ms / 1000, 0);
+        http->timer.data = app;
         ev_timer_start(app->loop, &http->timer);
     }
 
@@ -155,10 +156,6 @@ static int multi_timer_cb(CURLM *multi, long timeout_ms, void *app_data)
 void http_init(http_t *http)
 {
     app_t *app = container_of(http, app_t, http);
-
-    ev_timer_init(&http->timer, timer_cb, 0, 0);
-    http->timer.data = app;
-
     http->multi = curl_multi_init();
     curl_multi_setopt(http->multi, CURLMOPT_SOCKETFUNCTION, multi_sock_cb);
     curl_multi_setopt(http->multi, CURLMOPT_SOCKETDATA, app);
@@ -170,7 +167,10 @@ void http_destroy(http_t *http)
 {
     app_t *app = container_of(http, app_t, http);
     ev_timer_stop(app->loop, &http->timer);
-    curl_multi_cleanup(http->multi);
+    if(http->multi) {
+        curl_multi_cleanup(http->multi);
+        http->multi = NULL;
+    }
 }
 
 static uint32_t recv_cb(void *ptr, uint32_t size, uint32_t nmemb, void *req_data)

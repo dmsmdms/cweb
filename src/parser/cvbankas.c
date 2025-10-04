@@ -79,8 +79,10 @@ static void page_parse_cb(const http_resp_t *resp)
 
     if(cvb->current_page < cvb->page_count) {
         gumbo_destroy_wrap(html);
-        cvb->current_page++;
-        page_parse(app);
+        if(app->is_running) {
+            cvb->current_page++;
+            page_parse(app);
+        }
         return;
     }
 
@@ -89,6 +91,7 @@ cleanup:
 end:
     cvb->parse_vip_done = true;
     cvb->parse_normal_done = true;
+    ev_timer_set(&cvb->update_timer, UPDATE_INTERVAL_SEC, 0);
     ev_timer_start(app->loop, &cvb->update_timer);
 }
 
@@ -122,7 +125,7 @@ void cvbankas_init(cvbankas_t *cvb)
     cvb->parse_vip_done = true;
     cvb->parse_normal_done = true;
 
-    ev_timer_init(&cvb->update_timer, update_cb, UPDATE_INTERVAL_SEC, 0);
+    ev_timer_init(&cvb->update_timer, update_cb, 0, 0);
     cvb->update_timer.data = app;
     ev_timer_start(app->loop, &cvb->update_timer);
 }

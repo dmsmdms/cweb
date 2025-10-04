@@ -22,7 +22,7 @@ static const char *log_level_color[] = {
 bool log_init(log_t *log, const char *file, log_level_t level)
 {
     fclose(stdin);
-    fclose(stderr);
+    //fclose(stderr);
     log->level = level;
     log->colors_en = true;
     if(file) {
