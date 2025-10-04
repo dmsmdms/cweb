@@ -11,7 +11,7 @@ typedef struct {
 } http_req_t;
 
 typedef struct {
-    ev_io_t io;
+    ev_io io;
 } http_sock_t;
 
 static void multi_info_read(app_t *app)
@@ -53,17 +53,17 @@ static void multi_info_read(app_t *app)
             curl_multi_remove_handle(http->multi, curl);
             curl_easy_cleanup(curl);
             free(req->data);
-            mem_pool_free(&http->req_pool, req, sizeof(http_req_t));
+            free(req);
         }
     }
 }
 
-static void sock_cb(const ev_io_t *io, uint32_t events)
+static void sock_cb(struct ev_loop *loop, ev_io *io, int events)
 {
-    app_t *app = io->priv_data;
+    app_t *app = io->data;
     http_t *http = &app->http;
-    bool ev_in = !!(events & EPOLLIN);
-    bool ev_out = !!(events & EPOLLOUT);
+    bool ev_in = !!(events & EV_READ);
+    bool ev_out = !!(events & EV_WRITE);
     int action = 0;
     if(ev_in) {
         action |= CURL_POLL_IN;
@@ -94,15 +94,17 @@ static int multi_sock_cb(CURL *curl, curl_socket_t sock_fd, int action, void *ap
         bool ev_in = !!(action & CURL_POLL_IN);
         bool ev_out = !!(action & CURL_POLL_OUT);
         if(ev_in) {
-            events |= EPOLLIN;
+            events |= EV_READ;
         }
         if(ev_out) {
-            events |= EPOLLOUT;
+            events |= EV_WRITE;
         }
         if(sock == NULL) {
             log_debug("add fd=%d in=%u out=%u", sock_fd, ev_in, ev_out);
-            sock = mem_pool_alloc(&http->sock_pool, sizeof(http_sock_t));
-            ev_io_add(&app->loop, &sock->io, sock_cb, app, sock_fd, events);
+            sock = calloc(1, sizeof(http_sock_t));
+            ev_io_init(&sock->io, sock_cb, sock_fd, events);
+            sock->io.data = app;
+            ev_io_start(app->loop, &sock->io);
 
             CURLMcode rc = curl_multi_assign(http->multi, sock_fd, sock);
             if(rc != CURLM_OK) {
@@ -111,20 +113,22 @@ static int multi_sock_cb(CURL *curl, curl_socket_t sock_fd, int action, void *ap
             }
         } else {
             log_debug("update fd=%d in=%u out=%u", sock_fd, ev_in, ev_out);
-            ev_io_mod(&app->loop, &sock->io, events);
+            ev_io_stop(app->loop, &sock->io);
+            ev_io_set(&sock->io, sock_fd, events);
+            ev_io_start(app->loop, &sock->io);
         }
     }
 
     return 0;
 exit:
-    ev_io_del(&app->loop, &sock->io);
-    mem_pool_free(&http->sock_pool, sock, sizeof(http_sock_t));
+    ev_io_stop(app->loop, &sock->io);
+    free(sock);
     return 0;
 }
 
-static void timer_cb(const ev_timer_t *timer)
+static void timer_cb(struct ev_loop *loop, ev_timer *timer, int events)
 {
-    app_t *app = timer->priv_data;
+    app_t *app = timer->data;
     http_t *http = &app->http;
     CURLMcode rc = curl_multi_socket_action(http->multi, CURL_SOCKET_TIMEOUT, 0, NULL);
     if(rc != CURLM_OK) {
@@ -139,14 +143,10 @@ static int multi_timer_cb(CURLM *multi, long timeout_ms, void *app_data)
     app_t *app = app_data;
     http_t *http = &app->http;
 
+    ev_timer_stop(app->loop, &http->timer);
     if(timeout_ms >= 0) {
-        if(http->timer.cb) {
-            ev_timer_mod(&app->loop, &http->timer, timeout_ms);
-        } else {
-            ev_timer_add(&app->loop, &http->timer, timer_cb, app, timeout_ms);
-        }
-    } else {
-        ev_timer_del(&app->loop, &http->timer);
+        ev_timer_set(&http->timer, (timeout_ms / 1000), 0);
+        ev_timer_start(app->loop, &http->timer);
     }
 
     return 0;
@@ -155,6 +155,10 @@ static int multi_timer_cb(CURLM *multi, long timeout_ms, void *app_data)
 void http_init(http_t *http)
 {
     app_t *app = container_of(http, app_t, http);
+
+    ev_timer_init(&http->timer, timer_cb, 0, 0);
+    http->timer.data = app;
+
     http->multi = curl_multi_init();
     curl_multi_setopt(http->multi, CURLMOPT_SOCKETFUNCTION, multi_sock_cb);
     curl_multi_setopt(http->multi, CURLMOPT_SOCKETDATA, app);
@@ -165,9 +169,7 @@ void http_init(http_t *http)
 void http_destroy(http_t *http)
 {
     app_t *app = container_of(http, app_t, http);
-    if(http->timer.cb) {
-        ev_timer_del(&app->loop, &http->timer);
-    }
+    ev_timer_stop(app->loop, &http->timer);
     curl_multi_cleanup(http->multi);
 }
 
@@ -196,7 +198,7 @@ static uint32_t recv_cb(void *ptr, uint32_t size, uint32_t nmemb, void *req_data
 void http_get(http_t *http, const char *url, http_resp_cb_t cb, void *priv_data)
 {
     app_t *app = container_of(http, app_t, http);
-    http_req_t *req = mem_pool_alloc(&http->req_pool, sizeof(http_req_t));
+    http_req_t *req = calloc(1, sizeof(http_req_t));
     req->data = NULL;
     req->size = 0;
     req->offset = 0;
@@ -218,6 +220,6 @@ void http_get(http_t *http, const char *url, http_resp_cb_t cb, void *priv_data)
     return;
 exit:
     curl_easy_cleanup(curl);
-    mem_pool_free(&http->req_pool, req, sizeof(http_req_t));
+    free(req->data);
     return;
 }

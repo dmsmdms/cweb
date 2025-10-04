@@ -1,7 +1,6 @@
 #pragma once
 
-#include <core/ev.h>
-#include <core/mem.h>
+#include <common.h>
 #include <curl/curl.h>
 
 /**
@@ -24,10 +23,8 @@ typedef void (*http_resp_cb_t)(const http_resp_t *resp);
  * @brief Instance of the HTTP multi-connection handler
  */
 typedef struct {
-    ev_timer_t timer;
+    ev_timer timer;
     CURLM *multi;
-    mem_pool_t req_pool;
-    mem_pool_t sock_pool;
 } http_t;
 
 /**

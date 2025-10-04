@@ -11,9 +11,9 @@
  * @brief Global application state structure
  */
 typedef struct {
-    ev_loop_t loop;      ///< Event loop
-    log_t log;           ///< Logging handler
-    http_t http;         ///< HTTP multi-connection handler
-    db_t db;             ///< Database handler
-    cvbankas_t cvbankas; ///< CVBankas parser handler
+    struct ev_loop *loop; ///< Event loop
+    log_t log;            ///< Logging handler
+    http_t http;          ///< HTTP multi-connection handler
+    db_t db;              ///< Database handler
+    cvbankas_t cvbankas;  ///< CVBankas parser handler
 } app_t;

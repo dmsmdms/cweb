@@ -1,6 +1,6 @@
 # Compiler
 CC := gcc
-CFLAGS := -Wall -Wextra -O2 -I/usr/include/json-c -g -Og
+CFLAGS := -Wall -Wextra -O2 -I/usr/include/json-c -g -Og -fsanitize=address,undefined,thread,memory,leak
 CFLAGS := $(CFLAGS) -Iinclude
 
 # Directories
@@ -18,7 +18,7 @@ all: $(BIN)
 
 # Link objects into executable
 $(BIN): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -ljson-c -lcurl -lgumbo
+	$(CC) $(CFLAGS) -o $@ $^ -ljson-c -lcurl -lgumbo -lev
 
 # Compile sources into objects
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)

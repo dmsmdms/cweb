@@ -1,6 +1,6 @@
 #include <global.h>
 
-#define UPDATE_INTERVAL_MS 1000
+#define UPDATE_INTERVAL_SEC 5
 
 static const gumbo_xpath_t page_count_xpath[] = {
     { GUMBO_TAG_DIV, 1 }, { GUMBO_TAG_DIV, 1 }, { GUMBO_TAG_DIV, 5 }, { GUMBO_TAG_MAIN, 1 }, { GUMBO_TAG_UL, 1 },
@@ -25,32 +25,31 @@ static void page_parse_cb(const http_resp_t *resp)
 {
     app_t *app = resp->priv_data;
     cvbankas_t *cvb = &app->cvbankas;
-    char tmp_buf[2 * 1024 * 1024];
-    GumboOutput *html = gumbo_parse_wrap(resp->data, resp->size, tmp_buf, sizeof(tmp_buf));
+    GumboOutput *html = gumbo_parse_wrap(resp->data, resp->size);
     if(html == NULL || html->root == NULL) {
         log_error("parse %s failed", resp->url);
-        return;
+        goto end;
     }
 
     if(cvb->page_count == 0) {
         cvb->page_count = gumbo_get_int_by_xpath(html->root, page_count_xpath, ARRAY_SIZE(page_count_xpath));
         if(cvb->page_count == 0) {
             log_error("get page_count %s failed", resp->url);
-            goto exit;
+            goto cleanup;
         }
     }
     if(cvb->job_count == 0) {
         cvb->job_count = gumbo_get_int_by_xpath(html->root, job_count_xpath, ARRAY_SIZE(job_count_xpath));
         if(cvb->job_count == 0) {
             log_error("get job_count %s failed", resp->url);
-            goto exit;
+            goto cleanup;
         }
     }
 
     GumboNode *job_list_node = gumbo_get_element_by_xpath(html->root, job_list_xpath, ARRAY_SIZE(job_list_xpath));
     if(job_list_node == NULL) {
         log_error("get job_list %s failed", resp->url);
-        goto exit;
+        goto cleanup;
     }
     GumboVector *children = &job_list_node->v.element.children;
     for(uint32_t i = 0; i < children->length; i++) {
@@ -73,17 +72,24 @@ static void page_parse_cb(const http_resp_t *resp)
                 cvb->parse_normal_done = true;
             }
             if(cvb->parse_vip_done && cvb->parse_normal_done) {
-                goto exit;
+                goto cleanup;
             }
         }
     }
 
     if(cvb->current_page < cvb->page_count) {
+        gumbo_destroy_wrap(html);
         cvb->current_page++;
         page_parse(app);
+        return;
     }
-exit:
-    gumbo_destroy_wrap(html, tmp_buf);
+
+cleanup:
+    gumbo_destroy_wrap(html);
+end:
+    cvb->parse_vip_done = true;
+    cvb->parse_normal_done = true;
+    ev_timer_start(app->loop, &cvb->update_timer);
 }
 
 static void page_parse(app_t *app)
@@ -94,9 +100,9 @@ static void page_parse(app_t *app)
     http_get(&app->http, url, page_parse_cb, app);
 }
 
-static void update_cb(const ev_timer_t *timer)
+static void update_cb(struct ev_loop *loop, ev_timer *timer, int events)
 {
-    app_t *app = timer->priv_data;
+    app_t *app = timer->data;
     cvbankas_t *cvb = &app->cvbankas;
     if(cvb->parse_vip_done == false || cvb->parse_normal_done == false) {
         log_warn("cvbankas parse not done, skip this round");
@@ -110,16 +116,19 @@ static void update_cb(const ev_timer_t *timer)
     page_parse(app);
 }
 
-void cvbankas_init(cvbankas_t *parser)
+void cvbankas_init(cvbankas_t *cvb)
 {
-    app_t *app = container_of(parser, app_t, cvbankas);
-    parser->parse_vip_done = true;
-    parser->parse_normal_done = true;
-    ev_timer_add(&app->loop, &parser->update_timer, update_cb, app, UPDATE_INTERVAL_MS);
+    app_t *app = container_of(cvb, app_t, cvbankas);
+    cvb->parse_vip_done = true;
+    cvb->parse_normal_done = true;
+
+    ev_timer_init(&cvb->update_timer, update_cb, UPDATE_INTERVAL_SEC, 0);
+    cvb->update_timer.data = app;
+    ev_timer_start(app->loop, &cvb->update_timer);
 }
 
-void cvbankas_destroy(cvbankas_t *parser)
+void cvbankas_destroy(cvbankas_t *cvb)
 {
-    app_t *app = container_of(parser, app_t, cvbankas);
-    ev_timer_del(&app->loop, &parser->update_timer);
+    app_t *app = container_of(cvb, app_t, cvbankas);
+    ev_timer_stop(app->loop, &cvb->update_timer);
 }

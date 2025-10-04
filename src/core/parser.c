@@ -1,58 +1,16 @@
 #include <core/parser.h>
 
-typedef struct {
-    char *buf;
-    char *prev_ptr;
-    uint32_t size;
-    uint32_t capacity;
-} alloc_data_t;
-
-static void *gumbo_alloc(void *userdata, size_t size)
+GumboOutput *gumbo_parse_wrap(const char *html, uint32_t html_size)
 {
-    alloc_data_t *data = userdata;
-    if(data->size + size > data->capacity) {
-        return NULL;
-    }
-    data->prev_ptr = data->buf + data->size;
-    data->size += size;
-    return data->prev_ptr;
-}
-
-static void gumbo_free(void *userdata, void *ptr)
-{
-    alloc_data_t *data = userdata;
-    if(ptr == data->prev_ptr) {
-        data->size = data->prev_ptr - data->buf;
-        data->prev_ptr = data->buf + data->size;
-    }
-}
-
-static const GumboOptions options_tmpl = {
-    .allocator = gumbo_alloc,
-    .deallocator = gumbo_free,
-    .tab_stop = 8,
-    .max_errors = -1,
-    .fragment_context = GUMBO_TAG_BODY,
-    .fragment_namespace = GUMBO_NAMESPACE_HTML,
-};
-
-GumboOutput *gumbo_parse_wrap(const char *html, uint32_t html_size, void *tmp_buf, uint32_t tmp_buf_size)
-{
-    alloc_data_t *data = tmp_buf;
-    data->buf = tmp_buf;
-    data->prev_ptr = NULL;
-    data->size = sizeof(alloc_data_t);
-    data->capacity = tmp_buf_size;
-    GumboOptions options = options_tmpl;
-    options.userdata = data;
+    GumboOptions options = kGumboDefaultOptions;
+    options.fragment_context = GUMBO_TAG_BODY;
+    options.fragment_namespace = GUMBO_NAMESPACE_HTML;
     return gumbo_parse_with_options(&options, html, html_size);
 }
 
-void gumbo_destroy_wrap(GumboOutput *output, void *tmp_buf)
+void gumbo_destroy_wrap(GumboOutput *output)
 {
-    GumboOptions options = options_tmpl;
-    options.userdata = tmp_buf;
-    gumbo_destroy_output(&options, output);
+    gumbo_destroy_output(&kGumboDefaultOptions, output);
 }
 
 static uint32_t gumbo_get_inner_text(GumboNode *node, char *buf, uint32_t buf_size)
@@ -67,7 +25,7 @@ static uint32_t gumbo_get_inner_text(GumboNode *node, char *buf, uint32_t buf_si
     } else if(node->type == GUMBO_NODE_ELEMENT) {
         uint32_t len = 0;
         GumboVector *children = &node->v.element.children;
-        for(uint32_t i = 0; i < children->length; ++i) {
+        for(uint32_t i = 0; i < children->length; i++) {
             len += gumbo_get_inner_text(children->data[i], buf + len, buf_size - len);
         }
         return len;

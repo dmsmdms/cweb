@@ -15,18 +15,15 @@ typedef struct {
  * @brief Parse HTML with a temporary buffer to reduce memory allocation overhead
  * @param html - [in] HTML string to parse
  * @param html_size - [in] Size of the HTML string
- * @param tmp_buf - [in] Temporary buffer for parsing
- * @param tmp_buf_size - [in] Size of the temporary buffer
  * @return Pointer to GumboOutput structure containing the HTML tree or NULL on failure
  */
-GumboOutput *gumbo_parse_wrap(const char *html, uint32_t html_size, void *tmp_buf, uint32_t tmp_buf_size);
+GumboOutput *gumbo_parse_wrap(const char *html, uint32_t html_size);
 
 /**
  * @brief Destroy GumboOutput structure and free associated memory
  * @param output - [in] Pointer to GumboOutput structure to destroy
- * @param tmp_buf - [in] Temporary buffer used during parsing
  */
-void gumbo_destroy_wrap(GumboOutput *output, void *tmp_buf);
+void gumbo_destroy_wrap(GumboOutput *output);
 
 /**
  * @brief Get the first GumboNode that matches the given XPath-like query
