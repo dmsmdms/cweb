@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
     db_close(&app.db);
     http_destroy(&app.http);
     log_destroy(&app.log);
+    ev_loop_destroy(app.loop);
 
     return 0;
 }

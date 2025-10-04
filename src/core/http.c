@@ -47,7 +47,7 @@ static void multi_info_read(app_t *app)
                     log_warn("url %s done, resp_code=%ld data_size=%u", url, resp_code, req->size);
                 }
             } else {
-                log_error("url %s failed, error=%s", url, curl_easy_strerror(res));
+                log_error("url %s failed - %s", url, curl_easy_strerror(res));
             }
 
             curl_multi_remove_handle(http->multi, curl);
@@ -74,7 +74,7 @@ static void sock_cb(struct ev_loop *loop, ev_io *io, int events)
 
     CURLMcode rc = curl_multi_socket_action(http->multi, io->fd, action, NULL);
     if(rc != CURLM_OK) {
-        log_error("curl error %s", curl_multi_strerror(rc));
+        log_error("curl_multi_socket_action - %s", curl_multi_strerror(rc));
         return;
     }
     multi_info_read(app);
@@ -108,7 +108,7 @@ static int multi_sock_cb(CURL *curl, curl_socket_t sock_fd, int action, void *ap
 
             CURLMcode rc = curl_multi_assign(http->multi, sock_fd, sock);
             if(rc != CURLM_OK) {
-                log_error("curl error %s", curl_multi_strerror(rc));
+                log_error("curl_multi_assign - %s", curl_multi_strerror(rc));
                 goto exit;
             }
         } else {
@@ -132,7 +132,7 @@ static void timer_cb(struct ev_loop *loop, ev_timer *timer, int events)
     http_t *http = &app->http;
     CURLMcode rc = curl_multi_socket_action(http->multi, CURL_SOCKET_TIMEOUT, 0, NULL);
     if(rc != CURLM_OK) {
-        log_error("curl error %s", curl_multi_strerror(rc));
+        log_error("curl_multi_socket_action - %s", curl_multi_strerror(rc));
         return;
     }
     multi_info_read(app);
@@ -167,10 +167,8 @@ void http_destroy(http_t *http)
 {
     app_t *app = container_of(http, app_t, http);
     ev_timer_stop(app->loop, &http->timer);
-    if(http->multi) {
-        curl_multi_cleanup(http->multi);
-        http->multi = NULL;
-    }
+    curl_multi_cleanup(http->multi);
+    http->multi = NULL;
 }
 
 static uint32_t recv_cb(void *ptr, uint32_t size, uint32_t nmemb, void *req_data)
@@ -206,6 +204,10 @@ void http_get(http_t *http, const char *url, http_resp_cb_t cb, void *priv_data)
     req->priv_data = priv_data;
 
     CURL *curl = curl_easy_init();
+    if(curl == NULL) {
+        log_error("curl_easy_init failed");
+        goto exit;
+    }
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_PRIVATE, req);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_cb);
@@ -214,7 +216,7 @@ void http_get(http_t *http, const char *url, http_resp_cb_t cb, void *priv_data)
 
     CURLMcode rc = curl_multi_add_handle(http->multi, curl);
     if(rc != CURLM_OK) {
-        log_error("curl error %s", curl_multi_strerror(rc));
+        log_error("curl_multi_add_handle - %s", curl_multi_strerror(rc));
         goto exit;
     }
     return;

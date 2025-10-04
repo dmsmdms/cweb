@@ -1,21 +1,15 @@
 #pragma once
 
 #include <common.h>
-
-/**
- * @brief Database table identifiers
- */
-typedef enum PACKED {
-    DB_TABLE_NONE,
-    DB_TABLE_JOB_LT,     ///< Table where key - ID and value - job info
-    DB_TABLE_JOB_LT_URL, ///< Table where key - url and value - ID form DB_TABLE_JOB_LT
-    DB_TABLE_MAX,
-} db_table_t;
+#include <lmdb.h>
 
 /**
  * @brief Instance of the database handler
  */
 typedef struct {
+    MDB_env *env;
+    MDB_txn *txn;
+    MDB_dbi dbi;
 } db_t;
 
 /**

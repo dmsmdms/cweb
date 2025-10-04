@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/db.h>
+#include <db/types.h>
 
 /**
  * @brief Job source sites
@@ -42,21 +42,11 @@ typedef enum PACKED {
 } job_taxes_t;
 
 /**
- * @brief Key for DB_TABLE_JOB_<region> table and value for DB_TABLE_JOB_<region>_<subkey> table
+ * @brief Value for DB_TABLE_JOB_<region> and key - db_key_meta_t
  */
 typedef struct PACKED {
-    db_table_t table : 8; ///< Must be either DB_TABLE_JOB_<region>
-    uint32_t id : 24;     ///< Autoincrement unique job ID
-} db_job_key_t;
-
-/**
- * @brief Subkey for DB_TABLE_JOB_<region>_URL table
- */
-typedef struct PACKED {
-    db_table_t table;  ///< Must be DB_TABLE_JOB_<region>_URL
-    uint8_t url_len;   ///< Length of the url string
-    char url[256 - 2]; ///< Job url (null-terminated)
-} db_job_key_url_t;
+    uint32_t last_id; ///< Last used ID in the table
+} db_job_meta_t;
 
 /**
  * @brief Value for DB_TABLE_JOB_<region> table
@@ -76,12 +66,40 @@ typedef struct PACKED {
     bool for_ukraine;            ///< True if the job is available for Ukrainian refugees
     bool for_disabled;           ///< True if the job is available for disabled persons
     char data[8 * 1024 - 24];    ///< Contiguous buffer for all variable length strings
-} db_job_value_t;
+} db_job_t;
+
+/**
+ * @brief Job entry structure for easier access
+ */
+typedef struct {
+    const char *url;         ///< URL string
+    const char *city;        ///< City string
+    const char *title;       ///< Job title string
+    const char *description; ///< Job description string
+    const char *addr;        ///< Address string, NULL means not specified
+    uint32_t salary_min;     ///< Minimum salary, 1.00 is stored as 100, 0 means not specified
+    uint32_t salary_max;     ///< Maximum salary, 1.00 is stored as 100, 0 means not specified
+    job_source_t source;     ///< Job source site
+    job_currency_t currency; ///< Salary currency, JOB_CURRENCY_NONE means not specified
+    job_payment_t payment;   ///< Payment period, JOB_PAYMENT_NONE means not specified
+    job_taxes_t taxes;       ///< Tax type, JOB_TAXES_NONE means not specified
+    bool for_ukraine;        ///< True if the job is available for Ukrainian refugees
+    bool for_disabled;       ///< True if the job is available for disabled persons
+} job_t;
+
+/**
+ * @brief Add job entry to the database
+ * @param db - [in] Pointer to the database instance
+ * @param job - [in] Pointer to the job entry structure
+ * @return true if job was added successfully, false otherwise
+ */
+bool db_job_add(db_t *db, const job_t *job);
 
 /**
  * @brief Get job entry by URL
  * @param db - [in] Pointer to the database instance
  * @param url - [in] Job URL
- * @return Pointer to the job entry value, NULL if not found
+ * @param job - [out] Job entry structure to be filled, can be NULL to just check existence
+ * @return true if job was found and job structure filled, false otherwise
  */
-const db_job_value_t *db_job_get_by_url(const db_t *db, const char *url);
+bool db_job_get_by_url(const db_t *db, const char *url, job_t *job);

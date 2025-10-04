@@ -1,4 +1,4 @@
-#include <core/log.h>
+#include <global.h>
 
 #define COLOR_RED    "\x1b[31m"
 #define COLOR_YELLOW "\x1b[33m"
@@ -21,27 +21,32 @@ static const char *log_level_color[] = {
 
 bool log_init(log_t *log, const char *file, log_level_t level)
 {
+    app_t *app = container_of(log, app_t, log);
+    log->level = level;
+    log->fd = STDOUT_FILENO;
+    log->colors_en = true;
     fclose(stdin);
     //fclose(stderr);
-    log->level = level;
-    log->colors_en = true;
+
     if(file) {
         log->fd = creat(file, 0644);
         if(log->fd < 0) {
-            log->fd = STDOUT_FILENO;
+            log_error("open log file %s failed - %s", file, strerror(errno));
             return false;
         }
         fclose(stdout);
         log->colors_en = false;
-    } else {
-        log->fd = STDOUT_FILENO;
     }
+
     return true;
 }
 
 void log_destroy(log_t *log)
 {
-    close(log->fd);
+    if(log->fd >= 0) {
+        close(log->fd);
+        log->fd = -1;
+    }
 }
 
 void log_write(const log_t *log, log_level_t lvl, const char *file, int line, const char *func, const char *fmt, ...)

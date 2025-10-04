@@ -62,7 +62,7 @@ static void page_parse_cb(const http_resp_t *resp)
             log_error("get article url[%u] on %s failed", i, resp->url);
             continue;
         }
-        if(db_job_get_by_url(&app->db, url) == NULL) {
+        if(db_job_get_by_url(&app->db, url, NULL) == false) {
             // Add job
         } else {
             if(gumbo_has_class_by_xpath(child, article_vip_xpath, ARRAY_SIZE(article_vip_xpath),

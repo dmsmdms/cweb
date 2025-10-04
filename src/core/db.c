@@ -1,4 +1,9 @@
-#include <core/db.h>
+#include <global.h>
+
+void db_txn_begin(db_t *db)
+{
+    int rc = mdb_txn_begin(db->env, NULL, 0, &db->txn);
+}
 
 bool db_open(db_t *db, const char *dir)
 {
