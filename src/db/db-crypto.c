@@ -104,7 +104,7 @@ static bool export_csv_cb(app_t *app, str_t *out, const MDB_val *mdb_key, const 
         out->len -= n;
     } break;
     case sizeof(db_key_meta_t): {
-        size_t n = snprintf(out->data, out->len, "timestamp,close_price,volume,liq_ask,liq_bid,whales\n");
+        size_t n = snprintf(out->data, out->len, "symbol,timestamp,close_price,volume,liq_ask,liq_bid,whales\n");
         out->data += n;
         out->len -= n;
     } break;
