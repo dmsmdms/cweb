@@ -66,6 +66,23 @@ typedef struct {
 } crypto_arr_t;
 
 /**
+ * @brief Export cryptocurrency data to a CSV format
+ * @param app - [in] Pointer to the application structure
+ * @param out - [out] Pointer to the structure to hold the CSV data
+ * @param prev_key - [in] Pointer to the previous key for pagination (must zeroed for the first call)
+ * @return True on success, false on failure
+ */
+bool db_crypto_export_csv(app_t *app, str_t *out, MDB_val *prev_key);
+
+/**
+ * @brief Export cryptocurrency data to a CSV file
+ * @param app - [in] Pointer to the application structure
+ * @param path - [in] Path to the output CSV file
+ * @return True on success, false on failure
+ */
+bool db_crypto_export_csv_file(app_t *app, const char *path);
+
+/**
  * @brief Get cryptocurrency symbols from the database
  * @param app - [in] Pointer to the application structure
  * @param out - [out] Pointer to the structure to hold the symbols

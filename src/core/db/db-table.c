@@ -1,5 +1,7 @@
 #include <global.h>
 
+#define DB_EXPORT_MIN_SIZE (16 * 1024)
+
 static const void *db_get(app_t *app, const char *type, const void *key_data, size_t key_size)
 {
     MDB_val mdb_value, mdb_key = {
@@ -60,6 +62,40 @@ bool db_iterate(app_t *app, const char *type, const void *key_min, const void *k
             break;
         }
         if(!db_cursor_get(app, &mdb_key, &mdb_data, MDB_NEXT)) {
+            break;
+        }
+    }
+    db_txn_abort(app);
+    return true;
+}
+
+bool db_export(app_t *app, const char *type, str_t *out, db_export_cb_t cb, MDB_val *prev_key, void *priv_data)
+{
+    MDB_val mdb_key, mdb_value;
+    int cmd = MDB_NEXT;
+    if(prev_key->mv_data) {
+        mdb_key = *prev_key;
+        cmd = MDB_SET_RANGE;
+    }
+    if(!db_cursor_get(app, &mdb_key, &mdb_value, cmd)) {
+        log_error("%s export failed", type);
+        return false;
+    }
+
+    while(true) {
+        if(!cb(app, out, &mdb_key, &mdb_value, priv_data)) {
+            break;
+        }
+        if(!db_cursor_get(app, &mdb_key, &mdb_value, MDB_NEXT)) {
+            break;
+        }
+        if(out->len < DB_EXPORT_MIN_SIZE) {
+            prev_key->mv_data = mem_alloc(app, __func__, mdb_key.mv_size);
+            if(prev_key->mv_data == NULL) {
+                return false;
+            }
+            memcpy(prev_key->mv_data, mdb_key.mv_data, mdb_key.mv_size);
+            prev_key->mv_size = mdb_key.mv_size;
             break;
         }
     }

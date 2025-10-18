@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/base/str.h>
 #include <core/db/db.h>
 
 /**
@@ -28,6 +29,18 @@ typedef enum PACKED {
  */
 typedef bool (*db_iterate_cb_t)(app_t *app, const void *key_data, const void *value_data, size_t value_size,
                                 void *priv_data);
+
+/**
+ * @brief Callback type for exporting database entries
+ * @param app - [in] Pointer to the application instance
+ * @param out - [in,out] Pointer to the output string
+ * @param mdb_key - [in] Pointer to the MDB key
+ * @param mdb_value - [in] Pointer to the MDB value
+ * @param priv_data - [in] Pointer to private data passed to the callback
+ * @return True on success, false on failure
+ */
+typedef bool (*db_export_cb_t)(app_t *app, str_t *out, const MDB_val *mdb_key, const MDB_val *mdb_value,
+                               void *priv_data);
 
 /**
  * @brief First key in each table, stores metadata about the table in value
@@ -84,6 +97,17 @@ bool db_put(app_t *app, const char *type, const void *key_data, size_t key_size,
  */
 bool db_iterate(app_t *app, const char *type, const void *key_min, const void *key_max, size_t key_size,
                 db_iterate_cb_t cb, void *priv_data);
+
+/**
+ * @brief Export database entries of a specific type
+ * @param app - [in] Pointer to the application instance
+ * @param type - [in] Type of the entries to export
+ * @param out - [in,out] Pointer to the output string
+ * @param cb - [in] Callback function to process each entry
+ * @param priv_data - [in] Pointer to private data passed to the callback
+ * @return True on success, false on failure
+ */
+bool db_export(app_t *app, const char *type, str_t *out, db_export_cb_t cb, MDB_val *prev_key, void *priv_data);
 
 /**
  * @brief Create metadata for a specific table if it does not exist
