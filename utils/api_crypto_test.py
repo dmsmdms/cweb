@@ -10,7 +10,7 @@ data_get_metrics = {
     "act": "get-metrics",
     "data": {
         "symbol": "btcusdt",
-        "start": 1,
+        "start": 1760775248,
         "end": int(time.time()),
         "interval": 1,
         "limit": 10 * 1000,

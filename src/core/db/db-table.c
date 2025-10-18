@@ -143,7 +143,7 @@ const void *db_get_value_by_id(app_t *app, db_table_t table, uint32_t id)
 {
     db_key_id_t key_id = {
         .table = table,
-        .id = id,
+        .id = htonl(id),
     };
     return db_get(app, "value by ID", &key_id, sizeof(key_id));
 }
@@ -169,7 +169,7 @@ bool db_put_value_by_id(app_t *app, db_table_t table, uint32_t id, const void *v
 {
     db_key_id_t key_id = {
         .table = table,
-        .id = id,
+        .id = htonl(id),
     };
     return db_put(app, "value by ID", &key_id, sizeof(key_id), value, size);
 }

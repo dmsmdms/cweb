@@ -146,7 +146,6 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 #endif
-    db_crypto_export_csv_file(&app, "tmp/db.csv");
 
     ev_run(app.loop, 0);
     cleanup(&app);

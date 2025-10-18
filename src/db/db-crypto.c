@@ -81,7 +81,7 @@ static bool db_crypto_to_key(const app_t *app, db_key_crypto_t *key, const char 
 {
     bzero(key, sizeof(db_key_crypto_t));
     key->table = DB_TABLE_CRYPTO;
-    key->timestamp = timestamp;
+    key->timestamp = htobe64(timestamp);
     uint32_t symbol_len = strlen(symbol) + 1;
     if(symbol_len > sizeof(key->symbol)) {
         log_error("symbol len=%u is too long %s", symbol_len, symbol);
@@ -98,7 +98,8 @@ static bool export_csv_cb(app_t *app, str_t *out, const MDB_val *mdb_key, const 
     case sizeof(db_key_crypto_t): {
         const db_key_crypto_t *key = mdb_key->mv_data;
         const db_crypto_t *crypto = mdb_value->mv_data;
-        size_t n = snprintf(out->data, out->len, "%s,%" PRIu64 ",%g,%g,%g,%g,%hhu\n", key->symbol, key->timestamp,
+        uint64_t timestamp = be64toh(key->timestamp);
+        size_t n = snprintf(out->data, out->len, "%s,%" PRIu64 ",%g,%g,%g,%g,%hhu\n", key->symbol, timestamp,
                             crypto->close_price, crypto->volume, crypto->liq_ask, crypto->liq_bid, crypto->whales);
         out->data += n;
         out->len -= n;
@@ -145,15 +146,17 @@ static bool db_crypto_iterate_cb(app_t *app, const void *key_data, const void *v
         return false;
     }
     const db_key_crypto_t *key = key_data;
+    uint64_t timestamp = be64toh(key->timestamp);
+    log_debug("iterate crypto key symbol=%s timestamp=%" PRIu64 "", key->symbol, key->timestamp);
     if(priv->index > 0) {
         const crypto_t *prev_key = &arr->data[priv->index - 1];
-        if(key->timestamp < prev_key->timestamp + priv->interval) {
+        if(timestamp < prev_key->timestamp + priv->interval) {
             return true;
         }
     }
     const db_crypto_t *db_crypto = value_data;
     crypto_t *crypto = &arr->data[priv->index];
-    crypto->timestamp = key->timestamp;
+    crypto->timestamp = timestamp;
     crypto->close_price = db_crypto->close_price;
     crypto->volume = db_crypto->volume;
     crypto->liq_ask = db_crypto->liq_ask;
