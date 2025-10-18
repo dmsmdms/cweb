@@ -19,6 +19,7 @@ KCONFIG_ORIG := $(TMP_DIR)/.config.orig
 
 include $(wildcard $(KCONFIG_CONFIG_DIR)/auto.conf)
 include $(wildcard $(TMP_OBJ_DIR)/*.d)
+include $(wildcard $(TMP_JS_DIR)/*.d)
 
 $(notdir $(KCONFIG_LIST)):
 	@ mkdir -p $(KCONFIG_GENERATED_DIR)
@@ -46,9 +47,11 @@ CFLAGS := $(CFLAGS) -Wshadow -Wpointer-arith -Wstrict-prototypes -Wmissing-proto
 CFLAGS := $(CFLAGS) -fmerge-all-constants # Merge all same constants into one
 CFLAGS := $(CFLAGS) -ffunction-sections -fdata-sections -Wl,--gc-sections # Remove unused functions and data
 CFLAGS := $(CFLAGS) -I$(SRC_DIR) -I$(KCONFIG_GENERATED_DIR) # Include paths
+WASM_FLAGS := $(CFLAGS) --target=wasm32 -nostdlib -Wl,--no-entry -Wl,--export-all # WASM compilation flags
 
 ifdef CONFIG_BUILD_RELEASE
 CFLAGS := $(CFLAGS) -O2 -flto=auto # Enable link-time optimization
+WASM_FLAGS := $(WASM_FLAGS) -O2 -flto=auto # Enable link-time optimization
 endif
 ifdef CONFIG_BUILD_DEBUG
 CFLAGS := $(CFLAGS) -O0 -g # Enable debugging symbols
@@ -68,6 +71,7 @@ VPATH := $(VPATH) $(SRC_DIR)/db
 VPATH := $(VPATH) $(SRC_DIR)/bot
 VPATH := $(VPATH) $(SRC_DIR)/parser
 VPATH := $(VPATH) $(SRC_DIR)/api
+VPATH := $(VPATH) $(SRC_DIR)/wasm
 VPATH := $(VPATH) $(HTML_DIR)
 VPATH := $(VPATH) $(HTML_DIR)/scss
 VPATH := $(VPATH) $(HTML_DIR)/js
@@ -145,12 +149,14 @@ ifdef CONFIG_HTML_CRYPTO
 HTML := $(HTML) crypto-db.html
 SCSS := $(SCSS) crypto-db.scss
 JS := $(JS) crypto-db.js
+WASM := $(WASM) calc-crypto.c
 endif
 HTML := $(HTML:%.html=$(TMP_HTML_DIR)/%.html)
 CSS := $(SCSS:%.scss=$(TMP_CSS_DIR)/%.css)
 JS := $(JS:%.js=$(TMP_JS_DIR)/%.js)
+WASM := $(WASM:%.c=$(TMP_JS_DIR)/%.wasm)
 
-all: $(TARGET) $(HTML) $(CSS) $(JS)
+all: $(TARGET) $(HTML) $(CSS) $(JS) $(WASM)
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS) 
 
@@ -165,6 +171,10 @@ $(TMP_HTML_DIR)/%.html: %.html
 $(TMP_JS_DIR)/%.js: %.js
 	@ mkdir -p $(dir $@)
 	minify --type js $< -o $@
+
+$(TMP_JS_DIR)/%.wasm: %.c
+	@ mkdir -p $(dir $@)
+	clang $(WASM_FLAGS) $< -o $@
 
 $(TMP_CSS_DIR)/%.css: %.scss $(SCSS_DEPS) $(TMP_HTML_DIR)/%.html
 	@ mkdir -p $(dir $@)

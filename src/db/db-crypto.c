@@ -147,7 +147,6 @@ static bool db_crypto_iterate_cb(app_t *app, const void *key_data, const void *v
     }
     const db_key_crypto_t *key = key_data;
     uint64_t timestamp = be64toh(key->timestamp);
-    log_debug("iterate crypto key symbol=%s timestamp=%" PRIu64 "", key->symbol, key->timestamp);
     if(priv->index > 0) {
         const crypto_t *prev_key = &arr->data[priv->index - 1];
         if(timestamp < prev_key->timestamp + priv->interval) {

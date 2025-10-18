@@ -1,5 +1,8 @@
 'use strict';
 
+const METRIC_LIMIT = 10000;
+const ROUND_DECIMALS = 2;
+
 async function api_request(act, data = null) {
     let req_data = {
         act: act,
@@ -22,6 +25,17 @@ function time_get_unix(time) {
     return Math.floor(new Date(time).getTime() / 1000);
 }
 
+function time_get_str(unix) {
+    const time = new Date(unix * 1000);
+    const day = String(time.getDate()).padStart(2, '0');
+    const month = String(time.getMonth() + 1).padStart(2, '0');
+    const year = time.getFullYear();
+    const hours = String(time.getHours()).padStart(2, '0');
+    const minutes = String(time.getMinutes()).padStart(2, '0');
+    const seconds = String(time.getSeconds()).padStart(2, '0');
+    return `${day}-${month}-${year}\n${hours}:${minutes}:${seconds}`;
+}
+
 function form_validate(el, cond, text) {
     return el.setCustomValidity(cond ? text : '');
 }
@@ -31,7 +45,6 @@ async function crypto_symbol_init() {
     symbol.onchange = function () {
         form_validate(symbol, symbol.value == 'none', 'Please select a symbol.');
     };
-    symbol.onchange();
 
     const res = await api_request('get-symbols');
     if (res) {
@@ -49,6 +62,7 @@ async function crypto_symbol_init() {
         if (symbol_val) {
             symbol.value = symbol_val;
         }
+        symbol.onchange();
     }
 }
 
@@ -90,7 +104,7 @@ function crypto_form_init() {
             start: time_get_unix(start_val),
             end: time_get_unix(end_val),
             interval: parseInt(interval_val),
-            limit: 10000,
+            limit: METRIC_LIMIT,
         };
         const res = await api_request('get-metrics', req);
         if (res) {
@@ -110,20 +124,21 @@ function crypto_form_init() {
                 const volume_surge = document.createElement('td');
                 const volume_accel = document.createElement('td');
                 const close_price = document.createElement('td');
-                time.textContent = new Date(metric.ts * 1000).toISOString();
+                const liq_delta_val = metric.lb - metric.la / (metric.la + metric.lb);
+                time.textContent = time_get_str(metric.ts);
                 rsi.textContent = 0;
                 tail.textContent = 0;
                 slope.textContent = 0;
                 whales.textContent = metric.w;
-                liquidity.textContent = metric.la + metric.lb;
-                liq_bid.textContent = metric.lb;
-                liq_ask.textContent = metric.la;
-                liq_delta.textContent = metric.lb - metric.la / (metric.la + metric.lb);
-                bid_ask_ratio.textContent = metric.lb / metric.la;
-                volume.textContent = metric.v;
+                liquidity.textContent = (metric.la + metric.lb).toFixed(ROUND_DECIMALS);
+                liq_bid.textContent = metric.lb.toFixed(ROUND_DECIMALS);
+                liq_ask.textContent = metric.la.toFixed(ROUND_DECIMALS);
+                liq_delta.textContent = liq_delta_val.toFixed(ROUND_DECIMALS);
+                bid_ask_ratio.textContent = (metric.lb / metric.la).toFixed(ROUND_DECIMALS);
+                volume.textContent = metric.v.toFixed(ROUND_DECIMALS);
                 volume_surge.textContent = 0;
                 volume_accel.textContent = 0;
-                close_price.textContent = metric.c;
+                close_price.textContent = metric.c.toFixed(ROUND_DECIMALS);
 
                 const tr = document.createElement('tr');
                 tr.appendChild(time);
