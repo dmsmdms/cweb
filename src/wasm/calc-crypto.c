@@ -1,9 +1,6 @@
 #include <wasm/calc-crypto.h>
 
-#define NAN          __builtin_nanf("")
-#define RSI_PERIOD   14
-#define TAIL_PERIOD  5
-#define SLOPE_PERIOD 10
+#define NAN __builtin_nanf("")
 
 static float fabs(float x)
 {
@@ -17,7 +14,7 @@ float calc_crypto_rsi(const float *prices, uint32_t count, uint32_t offset)
     }
     float gain_sum = 0.0f;
     float loss_sum = 0.0f;
-    for(uint32_t i = offset + count - RSI_PERIOD, max_i = offset + count; i < max_i; i++) {
+    for(uint32_t max_i = offset + count, i = max_i - RSI_PERIOD; i < max_i; i++) {
         float delta = prices[i % count] - prices[(i - 1) % count];
         if(delta > 0.0f) {
             gain_sum += delta;
@@ -39,7 +36,7 @@ float calc_crypto_tail(const float *prices, uint32_t count, uint32_t offset)
     }
     float local_max = prices[offset];
     float local_min = prices[offset];
-    for(uint32_t i = offset + count - TAIL_PERIOD, max_i = offset + count; i < max_i; i++) {
+    for(uint32_t max_i = offset + count, i = max_i - TAIL_PERIOD; i < max_i; i++) {
         float price = prices[i % count];
         if(price > local_max) {
             local_max = price;
@@ -78,4 +75,18 @@ float calc_crypto_slope(const float *prices, uint32_t count, uint32_t offset)
     float slope = (SLOPE_PERIOD * sum_xy - sum_x * sum_y) / denominator;
     float mean_y = sum_y / SLOPE_PERIOD;
     return slope / mean_y; // Normalized slope
+}
+
+float calc_crypto_volume_surge(const float *volumes, uint32_t count, uint32_t offset, float current_volume)
+{
+    if(count < VOLUME_SURGE_COUNT) {
+        return NAN;
+    }
+    float sum = 0.0f;
+    for(uint32_t max_i = offset + count, i = max_i - VOLUME_SURGE_COUNT; i < max_i; i++) {
+        sum += volumes[i % count];
+    }
+
+    float avg = sum / VOLUME_SURGE_COUNT;
+    return (current_volume - avg) / avg;
 }

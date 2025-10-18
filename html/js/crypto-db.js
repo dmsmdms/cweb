@@ -2,7 +2,8 @@
 
 const METRIC_LIMIT = 10000;
 const ROUND_DECIMALS = 2;
-const PRICE_ARR_SIZE = 16;
+const PRICE_ARR_SIZE = 15;
+const VOLUME_ARR_SIZE = 5;
 
 async function api_request(act, data = null) {
     let req_data = {
@@ -54,11 +55,19 @@ async function wasm_load(name) {
 class CryptoCalc {
     constructor(wasm) {
         this.wasm = wasm;
+        this.last_volume_surge = NaN;
+
         this.prices = new Float32Array(wasm.mem_buf, wasm.mem_off, PRICE_ARR_SIZE);
         this.prices_ptr = wasm.mem_off;
         this.prices_off = -1;
         this.prices_cnt = 0;
         wasm.mem_off += PRICE_ARR_SIZE * 4;
+
+        this.volumes = new Float32Array(wasm.mem_buf, wasm.mem_off, VOLUME_ARR_SIZE);
+        this.volumes_ptr = wasm.mem_off;
+        this.volumes_off = -1;
+        this.volumes_cnt = 0;
+        wasm.mem_off += VOLUME_ARR_SIZE * 4;
     }
 
     static async init() {
@@ -71,6 +80,14 @@ class CryptoCalc {
         this.prices[this.prices_off] = close_price;
         if (this.prices_cnt < PRICE_ARR_SIZE) {
             this.prices_cnt++;
+        }
+    }
+
+    push_volume(volume) {
+        this.volumes_off = (this.volumes_off + 1) % VOLUME_ARR_SIZE;
+        this.volumes[this.volumes_off] = volume;
+        if (this.volumes_cnt < VOLUME_ARR_SIZE) {
+            this.volumes_cnt++;
         }
     }
 
@@ -96,6 +113,28 @@ class CryptoCalc {
             this.prices_cnt,
             this.prices_off,
         );
+    }
+
+    get_volume_surge(volume) {
+        return this.wasm.func.calc_crypto_volume_surge(
+            this.volumes_ptr,
+            this.volumes_cnt,
+            this.volumes_off,
+            volume,
+        );
+    }
+
+    get_volume_accel(volume_surge) {
+        if(isNaN(volume_surge)) {
+            return NaN;
+        }
+        if(isNaN(this.last_volume_surge)) {
+            this.last_volume_surge = volume_surge;
+            return NaN;
+        }
+        const accel = volume_surge - this.last_volume_surge;
+        this.last_volume_surge = volume_surge;
+        return accel;
     }
 }
 
@@ -186,9 +225,12 @@ async function crypto_form_init() {
                 const close_price = document.createElement('td');
 
                 calc.push_price(metric.c);
+                calc.push_volume(metric.v);
                 const rsi_val = calc.get_rsi();
                 const tail_val = calc.get_tail();
                 const slope_val = calc.get_slope();
+                const volume_surge_val = calc.get_volume_surge(metric.v);
+                const volume_accel_val = calc.get_volume_accel(volume_surge_val);
                 const liq_delta_val = metric.lb - metric.la / (metric.la + metric.lb);
 
                 time.textContent = time_get_str(metric.ts);
@@ -202,8 +244,8 @@ async function crypto_form_init() {
                 liq_delta.textContent = liq_delta_val.toFixed(ROUND_DECIMALS);
                 bid_ask_ratio.textContent = (metric.lb / metric.la).toFixed(ROUND_DECIMALS);
                 volume.textContent = metric.v.toFixed(ROUND_DECIMALS);
-                volume_surge.textContent = 0;
-                volume_accel.textContent = 0;
+                volume_surge.textContent = isNaN(volume_surge_val) ? '-' : volume_surge_val.toFixed(ROUND_DECIMALS);
+                volume_accel.textContent = isNaN(volume_accel_val) ? '-' : volume_accel_val.toFixed(ROUND_DECIMALS);
                 close_price.textContent = metric.c.toFixed(ROUND_DECIMALS);
 
                 const tr = document.createElement('tr');
