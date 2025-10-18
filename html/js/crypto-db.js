@@ -2,6 +2,7 @@
 
 const METRIC_LIMIT = 10000;
 const ROUND_DECIMALS = 2;
+const PRICE_ARR_SIZE = 16;
 
 async function api_request(act, data = null) {
     let req_data = {
@@ -40,6 +41,64 @@ function form_validate(el, cond, text) {
     return el.setCustomValidity(cond ? text : '');
 }
 
+async function wasm_load(name) {
+    let wasm = await WebAssembly.instantiateStreaming(fetch(name));
+    const instance = wasm.instance;
+    const memory = instance.exports.memory;
+    wasm.mem_buf = memory.buffer;
+    wasm.mem_off = 0;
+    wasm.func = instance.exports;
+    return wasm;
+}
+
+class CryptoCalc {
+    constructor(wasm) {
+        this.wasm = wasm;
+        this.prices = new Float32Array(wasm.mem_buf, wasm.mem_off, PRICE_ARR_SIZE);
+        this.prices_ptr = wasm.mem_off;
+        this.prices_off = -1;
+        this.prices_cnt = 0;
+        wasm.mem_off += PRICE_ARR_SIZE * 4;
+    }
+
+    static async init() {
+        const wasm = await wasm_load('js/calc-crypto.wasm');
+        return new CryptoCalc(wasm);
+    }
+
+    push_price(close_price) {
+        this.prices_off = (this.prices_off + 1) % PRICE_ARR_SIZE;
+        this.prices[this.prices_off] = close_price;
+        if (this.prices_cnt < PRICE_ARR_SIZE) {
+            this.prices_cnt++;
+        }
+    }
+
+    get_rsi() {
+        return this.wasm.func.calc_crypto_rsi(
+            this.prices_ptr,
+            this.prices_cnt,
+            this.prices_off,
+        );
+    }
+
+    get_tail() {
+        return this.wasm.func.calc_crypto_tail(
+            this.prices_ptr,
+            this.prices_cnt,
+            this.prices_off,
+        );
+    }
+
+    get_slope() {
+        return this.wasm.func.calc_crypto_slope(
+            this.prices_ptr,
+            this.prices_cnt,
+            this.prices_off,
+        );
+    }
+}
+
 async function crypto_symbol_init() {
     const symbol = document.getElementById('symbol');
     symbol.onchange = function () {
@@ -66,7 +125,7 @@ async function crypto_symbol_init() {
     }
 }
 
-function crypto_form_init() {
+async function crypto_form_init() {
     const form = document.getElementById('form');
     const start = document.getElementById('start');
     const end = document.getElementById('end');
@@ -75,6 +134,7 @@ function crypto_form_init() {
     let start_val = sessionStorage.getItem('form_start');
     let end_val = sessionStorage.getItem('form_end');
     let interval_val = sessionStorage.getItem('form_interval');
+    const calc = await CryptoCalc.init();
 
     if (start_val) {
         start.value = start_val;
@@ -124,11 +184,17 @@ function crypto_form_init() {
                 const volume_surge = document.createElement('td');
                 const volume_accel = document.createElement('td');
                 const close_price = document.createElement('td');
+
+                calc.push_price(metric.c);
+                const rsi_val = calc.get_rsi();
+                const tail_val = calc.get_tail();
+                const slope_val = calc.get_slope();
                 const liq_delta_val = metric.lb - metric.la / (metric.la + metric.lb);
+
                 time.textContent = time_get_str(metric.ts);
-                rsi.textContent = 0;
-                tail.textContent = 0;
-                slope.textContent = 0;
+                rsi.textContent = isNaN(rsi_val) ? '-' : rsi_val.toFixed(ROUND_DECIMALS);
+                tail.textContent = isNaN(tail_val) ? '-' : tail_val.toFixed(6);
+                slope.textContent = isNaN(slope_val) ? '-' : slope_val.toFixed(6);
                 whales.textContent = metric.w;
                 liquidity.textContent = (metric.la + metric.lb).toFixed(ROUND_DECIMALS);
                 liq_bid.textContent = metric.lb.toFixed(ROUND_DECIMALS);
