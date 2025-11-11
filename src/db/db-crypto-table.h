@@ -7,8 +7,15 @@
  */
 typedef struct {
     uint32_t sym_id_last; ///< Last cryptocurrency symbol ID
-    uint32_t sym_count;   ///< Number of cryptocurrency symbols
+    uint32_t sym_count;   ///< Number of glob cryptocurrency symbols
 } db_crypto_meta_t;
+
+typedef struct {
+    uint32_t id;    ///< Cryptocurrency symbol ID
+    bool is_glob;   ///< Flag indicating if the symbol is global
+    bool is_loc;    ///< Flag indicating if the symbol is local
+    uint8_t pad[2]; ///< Padding for alignment
+} db_crypto_sym_t;
 
 /**
  * @brief Structure to hold cryptocurrency data in the database
@@ -38,28 +45,28 @@ db_err_t db_crypto_put_meta(const db_crypto_meta_t *meta);
 
 /**
  * @brief Retrieve cryptocurrency symbol ID by symbol string
- * @param sym - [in] Cryptocurrency symbol string
- * @param psym_id - [out] Pointer to store the cryptocurrency symbol ID
+ * @param sym_name - [in] Cryptocurrency symbol string
+ * @param sym - [out] Pointer to store the cryptocurrency symbol ID
  * @return DB_ERR_OK on success, error code otherwise
  */
-db_err_t db_crypto_get_sym(const char *sym, uint32_t *psym_id);
+db_err_t db_crypto_get_sym(const char *sym_name, db_crypto_sym_t *sym);
 
 /**
  * @brief Retrieve cryptocurrency symbol by ID
- * @param psym - [out] Pointer to store the cryptocurrency symbol string
- * @param psym_size - [out] Pointer to store the size of the cryptocurrency symbol string
- * @param psym_id - [out] Pointer to store the cryptocurrency symbol ID
+ * @param psym_name - [out] Pointer to store the cryptocurrency symbol string
+ * @param psym_name_size - [out] Pointer to store the size of the cryptocurrency symbol string
+ * @param sym - [out] Pointer to store the cryptocurrency symbol ID
  * @return DB_ERR_OK on success, error code otherwise
  */
-db_err_t db_crypto_get_sym_next(const char **psym, uint32_t *psym_size, uint32_t *psym_id);
+db_err_t db_crypto_get_sym_next(const char **psym_name, uint32_t *psym_name_size, db_crypto_sym_t *sym);
 
 /**
  * @brief Put cryptocurrency symbol in the database
- * @param sym - [in] Cryptocurrency symbol string
- * @param sym_id - [in] Cryptocurrency symbol ID
+ * @param sym_name - [in] Cryptocurrency symbol string
+ * @param sym - [in] Pointer to cryptocurrency symbol ID
  * @return DB_ERR_OK on success, error code otherwise
  */
-db_err_t db_crypto_put_sym(const char *sym, uint32_t sym_id);
+db_err_t db_crypto_put_sym(const char *sym_name, const db_crypto_sym_t *sym);
 
 /**
  * @brief Retrieve next cryptocurrency data by symbol ID

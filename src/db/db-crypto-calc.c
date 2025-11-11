@@ -155,8 +155,8 @@ static csv_gen_err_t csv_gen_row(const csv_gen_ctx_t *gctx, void *priv_data)
 
 db_err_t db_crypto_init_calc(const char *sym_name, uint32_t *psym_id, calc_crypto_ctx_t *calc)
 {
-    uint32_t sym_id;
-    db_err_t res = db_crypto_get_sym(sym_name, &sym_id);
+    db_crypto_sym_t sym;
+    db_err_t res = db_crypto_get_sym(sym_name, &sym);
     if(res != DB_ERR_OK) {
         if(res == DB_ERR_NOT_FOUND) {
             log_error("Symbol '%s' not found in DB", sym_name);
@@ -164,14 +164,14 @@ db_err_t db_crypto_init_calc(const char *sym_name, uint32_t *psym_id, calc_crypt
         db_txn_abort();
         return res;
     }
-    *psym_id = sym_id;
+    *psym_id = sym.id;
 
     // Fill forward buffer //
     calc_crypto_init(calc);
     db_cursor_op_t op = DB_CURSOR_OP_SET_RANGE;
     for(uint32_t i = 0; i < FCHANGE_PERIOD; i++) {
         crypto_t crypto;
-        res = db_crypto_get_next1(sym_id, op, &crypto);
+        res = db_crypto_get_next1(sym.id, op, &crypto);
         if(res != DB_ERR_OK) {
             if(res == DB_ERR_NOT_FOUND) {
                 log_error("Not enough data for symbol '%s'", sym_name);

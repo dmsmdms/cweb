@@ -30,6 +30,8 @@ typedef struct {
 typedef struct {
     const char *name; ///< Cryptocurrency symbol name
     uint32_t id;      ///< Cryptocurrency symbol ID
+    bool is_glob;     ///< Is global symbol
+    bool is_loc;      ///< Is local symbol
 } crypto_sym_t;
 
 /**
@@ -70,6 +72,13 @@ db_err_t db_crypto_export_csv(const char *csv_path, const char *sym_name);
  * @return ERR_DB_OK on success, error code on failure
  */
 db_err_t db_crypto_export_calc_csv(const char *csv_path, const char *sym_name);
+
+/**
+ * @brief Add a cryptocurrency symbol to the database
+ * @param sym_name - [in] Name of the cryptocurrency symbol
+ * @return ERR_DB_OK on success, error code on failure
+ */
+db_err_t db_crypto_sym_add_glob(const char *sym_name);
 
 /**
  * @brief Add a cryptocurrency symbol to the database

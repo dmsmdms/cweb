@@ -143,6 +143,52 @@ db_err_t db_put_id_by_str(const char *table, const char *str, uint32_t id)
     return db_put(table, &key, &value);
 }
 
+db_err_t db_get_value_by_str(const char *table, const char *str, buf_t *value)
+{
+    buf_t key = {
+        .size = strlen(str),
+        .data = (char *)str,
+    };
+    size_t value_size = value->size;
+    db_err_t res = db_get(table, &key, value);
+    if(res != DB_ERR_OK) {
+        return res;
+    }
+    if(value->size != value_size) {
+        log_error("invalid size %s[%s] got=%zu/expected=%zu", table, str, value->size, value_size);
+        return DB_ERR_SIZE_MISMATCH;
+    }
+    return DB_ERR_OK;
+}
+
+db_err_t db_get_str_value_next(const char *table, const char **pstr, uint32_t *pstr_len, buf_t *value)
+{
+    buf_t key;
+    size_t value_size = value->size;
+    db_err_t res = db_cursor_get(table, &key, value, DB_CURSOR_OP_NEXT);
+    if(res != DB_ERR_OK) {
+        return res;
+    }
+    const char *str = key.data;
+    if(value->size != value_size) {
+        log_error("invalid size %s[%.*s] got=%zu/expected=%zu", table, (uint32_t)key.size, str, value->size,
+                  value_size);
+        return DB_ERR_SIZE_MISMATCH;
+    }
+    *pstr = str;
+    *pstr_len = key.size;
+    return DB_ERR_OK;
+}
+
+db_err_t db_put_value_by_str(const char *table, const char *str, const buf_t *value)
+{
+    buf_t key = {
+        .size = strlen(str),
+        .data = (char *)str,
+    };
+    return db_put(table, &key, value);
+}
+
 db_err_t db_get_value_by_id_ts(const char *table, uint32_t id, uint64_t ts, buf_t *value)
 {
     db_key_id_ts_t key_data = {

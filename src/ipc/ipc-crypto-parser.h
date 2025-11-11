@@ -7,6 +7,10 @@
  */
 typedef enum {
     IPC_CRYPTO_PARSER_CMD_GET_STATUS = IPC_CMD_MAX, ///< Get crypto parser status
+    IPC_CRYPTO_PARSER_CMD_ADD_GLOBAL_SYM,           ///< Add global crypto symbol
+    IPC_CRYPTO_PARSER_CMD_DEL_GLOBAL_SYM,           ///< Delete global crypto symbol
+    IPC_CRYPTO_PARSER_CMD_ADD_LOCAL_SYM,            ///< Add local crypto symbol
+    IPC_CRYPTO_PARSER_CMD_DEL_LOCAL_SYM,            ///< Delete local crypto symbol
     IPC_CRYPTO_PARSER_CMD_MAX,
 } ipc_crypto_parser_cmd_t;
 

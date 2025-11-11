@@ -36,19 +36,39 @@ db_err_t db_crypto_put_meta(const db_crypto_meta_t *meta)
     return db_put_value_by_id_ts(CRYPTO_TABLE, 0, 0, &value);
 }
 
-db_err_t db_crypto_get_sym(const char *sym, uint32_t *psym_id)
+db_err_t db_crypto_get_sym(const char *sym_name, db_crypto_sym_t *sym)
 {
-    return db_get_id_by_str(CRYPTO_SYM_TABLE, sym, psym_id);
+    buf_t value = {
+        .size = sizeof(db_crypto_sym_t),
+    };
+    db_err_t res = db_get_value_by_str(CRYPTO_SYM_TABLE, sym_name, &value);
+    if(res != DB_ERR_OK) {
+        return res;
+    }
+    memcpy(sym, value.data, sizeof(db_crypto_sym_t));
+    return DB_ERR_OK;
 }
 
-db_err_t db_crypto_get_sym_next(const char **psym, uint32_t *psym_size, uint32_t *psym_id)
+db_err_t db_crypto_get_sym_next(const char **psym_name, uint32_t *psym_name_size, db_crypto_sym_t *sym)
 {
-    return db_get_str_id_next(CRYPTO_SYM_TABLE, psym, psym_size, psym_id);
+    buf_t value = {
+        .size = sizeof(db_crypto_sym_t),
+    };
+    db_err_t res = db_get_str_value_next(CRYPTO_SYM_TABLE, psym_name, psym_name_size, &value);
+    if(res != DB_ERR_OK) {
+        return res;
+    }
+    memcpy(sym, value.data, sizeof(db_crypto_sym_t));
+    return DB_ERR_OK;
 }
 
-db_err_t db_crypto_put_sym(const char *sym, uint32_t sym_id)
+db_err_t db_crypto_put_sym(const char *sym_name, const db_crypto_sym_t *sym)
 {
-    return db_put_id_by_str(CRYPTO_SYM_TABLE, sym, sym_id);
+    buf_t value = {
+        .data = (void *)sym,
+        .size = sizeof(db_crypto_sym_t),
+    };
+    return db_put_value_by_str(CRYPTO_SYM_TABLE, sym_name, &value);
 }
 
 db_err_t db_crypto_get_next(uint32_t min_sym_id, uint32_t max_sym_id, uint64_t min_ts, uint64_t max_ts, uint64_t *pts,

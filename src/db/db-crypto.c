@@ -27,8 +27,9 @@ typedef enum {
 } crypto_csv_col_t;
 
 typedef struct {
-    crypto_sym_arr_t arr;
+    const char **arr;
     buf_ext_t buf;
+    uint32_t count;
 } crypto_sym_arr_gen_t;
 
 typedef struct {
@@ -46,15 +47,15 @@ STATIC_ASSERT(ARRAY_SIZE(csv_col_names) == CRYPTO_CSV_COL_MAX);
 static json_parse_err_t json_parse_crypto_sym(const jsmntok_t *cur, const char *json, void *priv_data)
 {
     crypto_sym_arr_gen_t *gen = priv_data;
-    crypto_sym_t *sym = &gen->arr.data[gen->arr.count++];
-    return json_parse_pstr(cur, json, &sym->name);
+    const char *sym = gen->arr[gen->count++];
+    return json_parse_pstr(cur, json, &sym);
 }
 
 static json_parse_err_t json_parse_crypto_arr(const jsmntok_t *cur, const char *json, void *priv_data)
 {
     crypto_sym_arr_gen_t *gen = priv_data;
-    gen->arr.data = buf_alloc(&gen->buf, cur->size * sizeof(crypto_sym_t));
-    if(gen->arr.data == NULL) {
+    gen->arr = buf_alloc(&gen->buf, cur->size * sizeof(char *));
+    if(gen->arr == NULL) {
         return JSON_PARSE_ERR_NO_MEM;
     }
     return json_parse_arr(cur, json, json_parse_crypto_sym, gen);
@@ -90,12 +91,17 @@ db_err_t db_crypto_init(const char *crypto_list_path)
 
     // Parse JSON //
     char json_buf[CRYPTO_SYM_ARR_BUF_SIZE];
-    crypto_sym_arr_gen_t gen = {
-        .buf.data = json_buf,
-        .buf.size = sizeof(json_buf),
+    crypto_sym_arr_gen_t global = {
+        .count = 0,
     };
+    crypto_sym_arr_gen_t local = {
+        .count = 0,
+    };
+    buf_init_ext(&global.buf, json_buf, sizeof(json_buf));
+    local.buf = global.buf;
     json_item_t items[] = {
-        { "global", json_parse_crypto_arr, &gen },
+        { "global", json_parse_crypto_arr, &global },
+        { "local", json_parse_crypto_arr, &local },
     };
     if(json_parse(file.data, file.len, items, ARRAY_SIZE(items)) != JSON_PARSE_ERR_OK) {
         db_txn_abort();
@@ -103,8 +109,20 @@ db_err_t db_crypto_init(const char *crypto_list_path)
     }
 
     // Store symbols in DB //
-    for(uint32_t i = 0; i < gen.arr.count; i++) {
-        res = db_crypto_put_sym(gen.arr.data[i].name, i + 1);
+    for(uint32_t i = 0; i < global.count; i++) {
+        const char *glob_name = global.arr[i];
+        db_crypto_sym_t sym = {
+            .id = i + 1,
+            .is_glob = true,
+            .is_loc = false,
+        };
+        for(uint32_t j = 0; j < local.count; j++) {
+            if(strcmp(glob_name, local.arr[j]) == 0) {
+                sym.is_loc = true;
+                break;
+            }
+        }
+        res = db_crypto_put_sym(glob_name, &sym);
         if(res != DB_ERR_OK) {
             db_txn_abort();
             return res;
@@ -112,8 +130,8 @@ db_err_t db_crypto_init(const char *crypto_list_path)
     }
 
     // Update meta //
-    meta.sym_count = gen.arr.count;
-    meta.sym_id_last = gen.arr.count;
+    meta.sym_count = global.count;
+    meta.sym_id_last = global.count;
     res = db_crypto_put_meta(&meta);
     if(res != DB_ERR_OK) {
         db_txn_abort();
@@ -161,10 +179,8 @@ static csv_parse_err_t csv_parse_row(const csv_parse_ctx_t *pctx, const char **c
 
 db_err_t db_crypto_import_csv(const char *csv_path, const char *sym_name)
 {
-    crypto_csv_parse_t ctx = {
-        .line_count = 0,
-    };
-    db_err_t res = db_crypto_get_sym(sym_name, &ctx.sym_id);
+    db_crypto_sym_t sym;
+    db_err_t res = db_crypto_get_sym(sym_name, &sym);
     if(res != DB_ERR_OK) {
         if(res == DB_ERR_NOT_FOUND) {
             log_error("Symbol '%s' not found in DB", sym_name);
@@ -172,6 +188,10 @@ db_err_t db_crypto_import_csv(const char *csv_path, const char *sym_name)
         db_txn_abort();
         return res;
     }
+    crypto_csv_parse_t ctx = {
+        .sym_id = sym.id,
+        .line_count = 0,
+    };
     if(csv_parse_file(csv_path, csv_parse_row, csv_col_names, ARRAY_SIZE(csv_col_names), &ctx) != CSV_PARSE_ERR_OK) {
         db_txn_abort();
         return DB_ERR_PARSE;
@@ -256,11 +276,8 @@ db_err_t db_crypto_export_csv(const char *csv_path, const char *sym_name)
         }
     } else {
         // Get symbol ID //
-        crypto_csv_parse_t ctx = {
-            .op = DB_CURSOR_OP_SET_RANGE,
-            .line_count = 0,
-        };
-        db_err_t res = db_crypto_get_sym(sym_name, &ctx.sym_id);
+        db_crypto_sym_t sym;
+        db_err_t res = db_crypto_get_sym(sym_name, &sym);
         if(res != DB_ERR_OK) {
             if(res == DB_ERR_NOT_FOUND) {
                 log_error("Symbol '%s' not found in DB", sym_name);
@@ -270,6 +287,11 @@ db_err_t db_crypto_export_csv(const char *csv_path, const char *sym_name)
         }
 
         // Export specified symbol //
+        crypto_csv_parse_t ctx = {
+            .sym_id = sym.id,
+            .op = DB_CURSOR_OP_SET_RANGE,
+            .line_count = 0,
+        };
         csv_gen_err_t csv_err = csv_gen_file(csv_path, csv_gen_row, csv_col_names, ARRAY_SIZE(csv_col_names), &ctx);
         db_txn_abort();
         if(csv_err != CSV_GEN_ERR_OK) {
@@ -318,7 +340,8 @@ db_err_t db_crypto_sym_arr_get(crypto_sym_arr_t *arr, buf_ext_t *buf)
     for(uint32_t i = 0; i < meta.sym_count; i++) {
         crypto_sym_t *sym = &arr->data[i];
         uint32_t name_len;
-        res = db_crypto_get_sym_next(&sym->name, &name_len, &sym->id);
+        db_crypto_sym_t db_sym;
+        res = db_crypto_get_sym_next(&sym->name, &name_len, &db_sym);
         if(res != DB_ERR_OK) {
             return res;
         }
@@ -330,6 +353,9 @@ db_err_t db_crypto_sym_arr_get(crypto_sym_arr_t *arr, buf_ext_t *buf)
         memcpy(name_str, sym->name, name_len);
         name_str[name_len] = '\0';
         sym->name = name_str;
+        sym->id = db_sym.id;
+        sym->is_glob = db_sym.is_glob;
+        sym->is_loc = db_sym.is_loc;
     }
 
     db_txn_abort();

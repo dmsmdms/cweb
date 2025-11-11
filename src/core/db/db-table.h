@@ -76,6 +76,34 @@ db_err_t db_get_str_id_next(const char *table, const char **pstr, uint32_t *pstr
 db_err_t db_put_id_by_str(const char *table, const char *str, uint32_t id);
 
 /**
+ * @brief Get value by string
+ * @param table - [in] Name of the database table
+ * @param str - [in] string key
+ * @param value - [out] Pointer to the buffer to store the value
+ * @return DB_ERR_OK on success, error code otherwise
+ */
+db_err_t db_get_value_by_str(const char *table, const char *str, buf_t *value);
+
+/**
+ * @brief Get next string and its value
+ * @param table - [in] Name of the database table
+ * @param pstr - [out] Pointer to the variable to store the string key
+ * @param pstr_len - [out] Pointer to the variable to store the length of the string key
+ * @param value - [out] Pointer to the buffer to store the value
+ * @return DB_ERR_OK on success, error code otherwise
+ */
+db_err_t db_get_str_value_next(const char *table, const char **pstr, uint32_t *pstr_len, buf_t *value);
+
+/**
+ * @brief Put value by string
+ * @param table - [in] Name of the database table
+ * @param str - [in] string key
+ * @param value - [in] Pointer to the buffer to store the value
+ * @return DB_ERR_OK on success, error code otherwise
+ */
+db_err_t db_put_value_by_str(const char *table, const char *str, const buf_t *value);
+
+/**
  * @brief Get value by ID and timestamp
  * @param table - [in] Name of the database table
  * @param id - [in] ID key
