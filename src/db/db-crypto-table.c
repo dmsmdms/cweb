@@ -80,6 +80,21 @@ db_err_t db_crypto_get_next1(uint32_t sym_id, db_cursor_op_t op, crypto_t *crypt
     return DB_ERR_OK;
 }
 
+db_err_t db_crypto_get_next2(uint32_t sym_id, uint64_t min_ts, db_cursor_op_t op, crypto_t *crypto)
+{
+    db_crypto_t db_crypto;
+    db_err_t res = db_crypto_get_next(sym_id, sym_id, min_ts, UINT64_MAX, &crypto->ts, &db_crypto, op);
+    if(res != DB_ERR_OK) {
+        return res;
+    }
+    crypto->close = db_crypto.close;
+    crypto->volume = db_crypto.volume;
+    crypto->liq_ask = db_crypto.liq_ask;
+    crypto->liq_bid = db_crypto.liq_bid;
+    crypto->whales = db_crypto.whales;
+    return DB_ERR_OK;
+}
+
 db_err_t db_crypto_put(uint32_t sym_id, uint64_t ts, const db_crypto_t *crypto)
 {
     buf_t value = {

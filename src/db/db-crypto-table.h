@@ -85,6 +85,16 @@ db_err_t db_crypto_get_next(uint32_t min_sym_id, uint32_t max_sym_id, uint64_t m
 db_err_t db_crypto_get_next1(uint32_t sym_id, db_cursor_op_t op, crypto_t *crypto);
 
 /**
+ * @brief Retrieve next cryptocurrency data for a specific symbol ID with a minimum timestamp
+ * @param sym_id - [in] Cryptocurrency symbol ID
+ * @param min_ts - [in] Minimum timestamp to consider
+ * @param op - [in] Cursor operation (e.g., NEXT, PREV)
+ * @param crypto - [out] Pointer to store the retrieved cryptocurrency data
+ * @return DB_ERR_OK on success, error code otherwise
+ */
+db_err_t db_crypto_get_next2(uint32_t sym_id, uint64_t min_ts, db_cursor_op_t op, crypto_t *crypto);
+
+/**
  * @brief Put cryptocurrency data in the database
  * @param sym_id - [in] Cryptocurrency symbol ID
  * @param ts - [in] Timestamp of the cryptocurrency data

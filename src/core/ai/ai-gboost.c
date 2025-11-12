@@ -4,6 +4,8 @@
 
 LOG_MOD_INIT(LOG_LVL_DEFAULT)
 
+static BoosterHandle g_boost = NULL;
+
 static void free_model(BoosterHandle boost, DMatrixHandle dtrain)
 {
     XGBoosterFree(boost);
@@ -72,5 +74,29 @@ ai_gb_err_t ai_gb_train_model(const float *train_data, const float *labels, uint
         return AI_GB_ERR_SAVE;
     }
 
+    XGDMatrixFree(dtrain);
+    g_boost = boost;
+
+    return AI_GB_ERR_OK;
+}
+
+ai_gb_err_t ai_gb_predict(const float *data, float label, uint32_t num_cols)
+{
+    DMatrixHandle dtrain = NULL;
+    if(XGDMatrixCreateFromMat(data, 1, num_cols, 0, &dtrain) < 0) {
+        log_error("create DMatrix failed - %s", XGBGetLastError());
+        return AI_GB_ERR_NO_MEM;
+    }
+
+    bst_ulong out_len = 0;
+    const float *out_result = NULL;
+    if(XGBoosterPredict(g_boost, dtrain, 0, 0, 0, &out_len, &out_result) < 0) {
+        log_error("predict failed - %s", XGBGetLastError());
+        XGDMatrixFree(dtrain);
+        return AI_GB_ERR_TRAIN;
+    }
+
+    log_info("true label: %.3f, predicted: %.6f", label, out_result[0]);
+    XGDMatrixFree(dtrain);
     return AI_GB_ERR_OK;
 }
