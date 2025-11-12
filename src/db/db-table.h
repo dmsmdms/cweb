@@ -1,6 +1,12 @@
 #pragma once
 
-#include <core/db/db.h>
+#include <db/db.h>
+
+typedef enum {
+    DB_TABLE_ID_CRYPTO_SYM_META,
+    DB_TABLE_ID_CRYPTO_SYM,
+    DB_TABLE_ID_MAX,
+} db_table_id_t;
 
 /**
  * @brief Get value by ID

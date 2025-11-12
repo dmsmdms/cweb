@@ -2,6 +2,9 @@
 
 #include <core/base/buf.h>
 
+typedef struct MDB_txn MDB_txn;
+typedef struct MDB_val MDB_val;
+
 /**
  * @brief Enumeration of database error codes
  */
@@ -94,7 +97,7 @@ void db_txn_abort(void);
  * @param value - [out] Pointer to the value buffer
  * @return DB_ERR_OK on success, error code otherwise
  */
-db_err_t db_get(const char *db_name, const buf_t *key, buf_t *value);
+db_err_t db_get(MDB_val *key, MDB_val *val);
 
 /**
  * @brief Put key-value pair into the database within a transaction
@@ -103,7 +106,9 @@ db_err_t db_get(const char *db_name, const buf_t *key, buf_t *value);
  * @param value - [in] Pointer to the value buffer
  * @return DB_ERR_OK on success, error code otherwise
  */
-db_err_t db_put(const char *db_name, const buf_t *key, const buf_t *value);
+db_err_t db_put(MDB_val *key, MDB_val *val);
+
+db_err_t db_del(MDB_val *key);
 
 /**
  * @brief Get next key-value pair from the database cursor within a transaction
@@ -113,4 +118,4 @@ db_err_t db_put(const char *db_name, const buf_t *key, const buf_t *value);
  * @param op - [in] Cursor operation (set or next)
  * @return DB_ERR_OK on success, error code otherwise
  */
-db_err_t db_cursor_get(const char *db_name, buf_t *key, buf_t *value, db_cursor_op_t op);
+db_err_t db_cursor_get(MDB_val *key, MDB_val *val);

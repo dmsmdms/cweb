@@ -164,7 +164,7 @@ void db_txn_abort(void)
     }
 }
 
-db_err_t db_get(const char *db_name, const buf_t *key, buf_t *value)
+db_err_t db_get(MDB_val *key, MDB_val *val)
 {
     db_err_t res = db_name_open(db_name, true);
     if(res != DB_ERR_OK) {
@@ -187,7 +187,7 @@ db_err_t db_get(const char *db_name, const buf_t *key, buf_t *value)
     return DB_ERR_OK;
 }
 
-db_err_t db_put(const char *db_name, const buf_t *key, const buf_t *value)
+db_err_t db_put(const buf_t *key, const buf_t *value)
 {
     db_err_t res = db_name_open(db_name, false);
     if(res != DB_ERR_OK) {
