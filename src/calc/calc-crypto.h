@@ -108,6 +108,8 @@ typedef struct {
 
 void calc_crypto_init(calc_crypto_ctx_t *ctx);
 
+void calc_crypto_main(calc_crypto_ctx_t *ctx, const crypto_t *cur, calc_crypto_row_t *row);
+
 void calc_crypto(calc_crypto_ctx_t *ctx, const crypto_t *fdata, calc_crypto_row_t *row);
 
 void calc_crypto_log_stat(const calc_crypto_stat_t *stat);

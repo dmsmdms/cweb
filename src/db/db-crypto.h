@@ -94,3 +94,8 @@ db_err_t db_crypto_sym_arr_get(crypto_sym_arr_t *arr, buf_ext_t *buf);
  * @return ERR_DB_OK on success, error code on failure
  */
 db_err_t db_crypto_ai_train_model(const char *path, const char *sym_name);
+
+/**
+ * @brief Deinitialize the cryptocurrency AI module
+ */
+void db_crypto_ai_deinit(void);

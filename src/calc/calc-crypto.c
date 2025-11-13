@@ -54,10 +54,9 @@ void calc_crypto_init(calc_crypto_ctx_t *ctx)
     buf_circ_init(&ctx->hist.rsi, ctx->hist.rsi_buf, CALC_CRYPTO_SIZE_RSI_HIST, sizeof(float));
 }
 
-void calc_crypto(calc_crypto_ctx_t *ctx, const crypto_t *fdata, calc_crypto_row_t *row)
+void calc_crypto_main(calc_crypto_ctx_t *ctx, const crypto_t *cur, calc_crypto_row_t *row)
 {
     // Add current row to circular history buffers (need for calculations) //
-    const crypto_t *cur = buf_circ_get(&ctx->hist.forward, ctx->hist.forward.cnt - FCHANGE_PERIOD);
     buf_circ_add(&ctx->hist.price, &cur->close);
     buf_circ_add(&ctx->hist.volume, &cur->volume);
     buf_circ_add(&ctx->hist.liq_bid, &cur->liq_bid);
@@ -111,6 +110,12 @@ void calc_crypto(calc_crypto_ctx_t *ctx, const crypto_t *fdata, calc_crypto_row_
     row->volume_change_5 = calc_crypto_pct(&ctx->hist.volume, PERIOD_5);
     row->volume_ma_ratio = clac_crypto_volume_ma_ratio(ctx);
     row->liq_bid_growth_15 = calc_crypto_pct(&ctx->hist.liq_bid, PERIOD_15);
+}
+
+void calc_crypto(calc_crypto_ctx_t *ctx, const crypto_t *fdata, calc_crypto_row_t *row)
+{
+    const crypto_t *cur = buf_circ_get(&ctx->hist.forward, ctx->hist.forward.cnt - FCHANGE_PERIOD);
+    calc_crypto_main(ctx, cur, row);
 
     // Check label conditions and collect statistic //
     calc_crypto_fchange_t fchange = calc_crypto_fchange(ctx);

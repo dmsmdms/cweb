@@ -49,7 +49,7 @@ CFLAGS := $(CFLAGS) -ffunction-sections -fdata-sections # Remove unused function
 CFLAGS := $(CFLAGS) -Wno-format-nonliteral # Exclude some warnings
 CFLAGS := $(CFLAGS) -I$(SRC_DIR) -I$(KCONFIG_GENERATED_DIR) # Include paths
 WASM_FLAGS := $(CFLAGS) --target=wasm32 -nostdlib -Wl,--no-entry -Wl,--export-all # WASM compilation flags
-LDFLAGS := -Wl,-z,stack-size=4194304 # Set stack size to 4MB
+LDFLAGS := -L /usr/local/lib -Wl,-z,stack-size=4194304 # Set stack size to 4MB
 LDFLAGS := $(LDFLAGS) -Wl,--gc-sections # Remove unused functions and data
 
 ifdef CONFIG_BUILD_RELEASE

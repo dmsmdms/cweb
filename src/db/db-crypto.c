@@ -63,17 +63,12 @@ static json_parse_err_t json_parse_crypto_arr(const jsmntok_t *cur, const char *
 db_err_t db_crypto_init(const char *crypto_list_path)
 {
     db_crypto_meta_t meta;
-    db_err_t res = db_txn_begin(false);
+    db_err_t res = db_crypto_get_meta(&meta);
+    db_txn_abort();
     if(res != DB_ERR_OK) {
-        return res;
-    }
-    res = db_crypto_get_meta(&meta);
-    if(res != DB_ERR_OK) {
-        db_txn_abort();
         return res;
     }
     if(meta.sym_count > 0) {
-        db_txn_abort();
         return DB_ERR_OK;
     }
 
@@ -84,7 +79,6 @@ db_err_t db_crypto_init(const char *crypto_list_path)
         .len = sizeof(buf),
     };
     if(file_read_str(crypto_list_path, &file) != FILE_ERR_OK) {
-        db_txn_abort();
         return DB_ERR_OPEN;
     }
 
@@ -98,7 +92,6 @@ db_err_t db_crypto_init(const char *crypto_list_path)
         { "global", json_parse_crypto_arr, &gen },
     };
     if(json_parse(file.data, file.len, items, ARRAY_SIZE(items)) != JSON_PARSE_ERR_OK) {
-        db_txn_abort();
         return DB_ERR_PARSE;
     }
 

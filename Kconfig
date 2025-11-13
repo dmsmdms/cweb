@@ -35,6 +35,7 @@ menu "Application"
     config APP_CRYPTO_TRAIN
         bool "Crypto AI training model"
         select AI_CRYPTO_TRAIN
+        select TELEBOT
 
     config APP_CRYPTO_BOT_NOTIFY
         bool "Crypto bot notifications"

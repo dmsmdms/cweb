@@ -3,6 +3,7 @@
 #include <core/base/args.h>
 #include <core/base/log.h>
 #include <core/base/cfg.h>
+#include <core/ai/ai-gboost.h>
 #include <core/http/http-server.h>
 #include <core/http/http-client.h>
 #include <core/ipc/ipc-server.h>
@@ -19,6 +20,8 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
+#include <unistd.h>
+#include <stdio.h>
 #include <ev.h>
 
 LOG_MOD_INIT(LOG_LVL_DEFAULT)
@@ -49,6 +52,9 @@ static void sigterm_cb(struct ev_loop *loop, ev_signal *signal, UNUSED int event
     log_info("get signal %s exit", strsignal(signal->signum));
 
     // Stop all libev watchers for safe break from ev_run //
+#ifdef CONFIG_AI_CRYPTO_TRAIN
+    db_crypto_ai_deinit();
+#endif
 #ifdef CONFIG_APP_BOT_ADMIN
     bot_admin_deinit();
 #endif
@@ -141,6 +147,9 @@ static void cleanup(void)
 #ifdef CONFIG_PARSER_CVBANKAS
     parser_cvb_destroy();
 #endif
+#ifdef CONFIG_AI_GBOOST
+    ai_gb_deinit();
+#endif
 #ifdef CONFIG_DB
     db_close();
 #endif
@@ -201,7 +210,11 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 #ifdef CONFIG_DB
-    bool db_rd_only = args.db_export_file ? true : false;
+    const char *model = NULL;
+    #ifdef CONFIG_AI_CRYPTO_TRAIN
+    model = getenv("AI_MODEL");
+    #endif
+    bool db_rd_only = args.db_export_file || model ? true : false;
     if(db_open(cfg.db_path, cfg.db_size_mb, cfg.db_count, db_rd_only) != DB_ERR_OK) {
         cleanup();
         return EXIT_FAILURE;
@@ -285,8 +298,19 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 #endif
-
-    db_crypto_ai_train_model("tmp/mod.ubj", "ethusdt");
+#ifdef CONFIG_AI_CRYPTO_TRAIN
+    if(model) {
+        char path[1024];
+        sprintf(path, "model/%s.ubj", model);
+        if(access("model", F_OK) != 0) {
+            mkdir("model", 0755);
+        }
+        if(db_crypto_ai_train_model(path, model) != DB_ERR_OK) {
+            cleanup();
+            return EXIT_FAILURE;
+        }
+    }
+#endif
 
     ev_run(EV_DEFAULT, 0);
     cleanup();

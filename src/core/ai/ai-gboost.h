@@ -27,8 +27,13 @@ ai_gb_err_t ai_gb_train_model(const float *train_data, const float *labels, uint
 /**
  * @brief Predict using a trained gradient boosting model
  * @param data - [in] Pointer to the input data (features)
- * @param label - [in] True label for the input data (for evaluation purposes)
  * @param num_cols - [in] Number of columns (features) in the input data
+ * @param res - [out] Pointer to store the prediction result
  * @return AI_GB_ERR_OK on success, error code otherwise
  */
-ai_gb_err_t ai_gb_predict(const float *data, float label, uint32_t num_cols);
+ai_gb_err_t ai_gb_predict(const float *data, uint32_t num_cols, float *res);
+
+/**
+ * @brief Deinitialize the gradient boosting model and free resources
+ */
+void ai_gb_deinit(void);
