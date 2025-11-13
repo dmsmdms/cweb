@@ -1,5 +1,4 @@
 #include <db/db-crypto-table.h>
-#include <core/db/db-table.h>
 #include <core/base/log.h>
 #include <string.h>
 

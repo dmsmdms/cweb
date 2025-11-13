@@ -1,8 +1,6 @@
 #pragma once
 
-#include <core/db/db.h>
-
-#define CRYPTO_SYM_ARR_BUF_SIZE (128 * 1024)
+#include <db/db-table.h>
 
 /**
  * @brief Structure to hold cryptocurrency data

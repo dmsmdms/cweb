@@ -1,5 +1,4 @@
 #include <db/crypto/db-crypto-sym.h>
-#include <db/db-table.h>
 #include <core/base/log.h>
 #include <arpa/inet.h>
 #include <string.h>
@@ -7,237 +6,102 @@
 
 LOG_MOD_INIT(LOG_LVL_DEFAULT)
 
-typedef struct {
-    db_table_id_t table_id;
-} db_crypto_sym_meta_key_t;
+#define DB_CRYPTO_SYM_KEY      { htonl(DB_TABLE_ID_CRYPTO_SYM) }
+#define DB_CRYPTO_SYM_META_KEY { htonl(DB_TABLE_ID_CRYPTO_SYM_META) }
 
-typedef struct {
-    uint32_t last_sym_id;
-    uint32_t global_sym_cnt;
-    uint32_t local_sym_cnt;
-} db_crypto_sym_meta_val_t;
-
-typedef struct {
-    db_table_id_t table_id;
-    char sym_name[DB_CRYPTO_SYM_NAME_LEN];
-} db_crypto_sym_key_t;
-
-typedef struct {
-    uint32_t sym_id;
-    bool is_local;
-} db_crypto_sym_val_t;
+static void db_crypto_sym_key(db_crypto_sym_key_t *key, const char *sym_name)
+{
+    key->table_id = htonl(DB_TABLE_ID_CRYPTO_SYM);
+    strncpy(key->sym_name, sym_name, DB_CRYPTO_SYM_NAME_LEN);
+}
 
 static db_err_t db_crypto_sym_get_meta(db_crypto_sym_meta_val_t *val)
 {
-    // Set key to get
-    db_crypto_sym_meta_key_t key = {
-        .table_id = htonl(DB_TABLE_ID_CRYPTO_SYM_META),
-    };
-    MDB_val mdb_val, mdb_key = {
-        .mv_size = sizeof(db_crypto_sym_meta_key_t),
-        .mv_data = &key,
-    };
-
-    // Get the meta info
+    db_crypto_sym_meta_key_t key = DB_CRYPTO_SYM_META_KEY;
+    MDB_val mdb_val, mdb_key = DB_VAL(&key);
     db_err_t res = db_get(&mdb_key, &mdb_val);
     if(res != DB_ERR_OK) {
         if(res == DB_ERR_NOT_FOUND) {
             log_warn("crypto_sym_meta not found");
             val->last_sym_id = 1;
-            val->global_sym_cnt = 0;
-            val->local_sym_cnt = 0;
             return DB_ERR_OK;
         }
         return res;
     }
-
-    // Copy the meta info
-    if(mdb_val.mv_size != sizeof(db_crypto_sym_meta_val_t)) {
-        log_error("size mismatch: %zu != %zu", mdb_val.mv_size, sizeof(db_crypto_sym_meta_val_t));
-        return DB_ERR_SIZE_MISMATCH;
-    }
+    db_return_if_size(mdb_val, sizeof(db_crypto_sym_meta_val_t));
     memcpy(val, mdb_val.mv_data, sizeof(db_crypto_sym_meta_val_t));
-
     return res;
 }
 
 static db_err_t db_crypto_sym_put_meta(db_crypto_sym_meta_val_t *val)
 {
-    db_crypto_sym_meta_key_t key = {
-        .table_id = htonl(DB_TABLE_ID_CRYPTO_SYM_META),
-    };
-    MDB_val mdb_key = {
-        .mv_size = sizeof(db_crypto_sym_meta_key_t),
-        .mv_data = &key,
-    };
-    MDB_val mdb_val = {
-        .mv_size = sizeof(db_crypto_sym_meta_val_t),
-        .mv_data = val,
-    };
+    db_crypto_sym_meta_key_t key = DB_CRYPTO_SYM_META_KEY;
+    MDB_val mdb_key = DB_VAL(&key);
+    MDB_val mdb_val = DB_VAL(val);
     return db_put(&mdb_key, &mdb_val);
 }
 
 db_err_t db_crypto_sym_add_global(const char *sym_name)
 {
-    // Set key to add
-    db_crypto_sym_key_t key = {
-        .table_id = htonl(DB_TABLE_ID_CRYPTO_SYM),
-    };
-    strncpy(key.sym_name, sym_name, DB_CRYPTO_SYM_NAME_LEN);
-    MDB_val mdb_val, mdb_key = {
-        .mv_size = sizeof(db_crypto_sym_key_t),
-        .mv_data = &key,
-    };
+    db_crypto_sym_key_t key;
+    db_crypto_sym_key(&key, sym_name);
+    MDB_val mdb_val, mdb_key = DB_VAL(&key);
 
-    // Check if entry exists
+    // Check if the symbol already exists
     db_err_t res = db_get(&mdb_key, &mdb_val);
     if(res == DB_ERR_NOT_FOUND) {
-        // Get last sym id from meta
         db_crypto_sym_meta_val_t meta;
-        res = db_crypto_sym_get_meta(&meta);
-        if(res != DB_ERR_OK) {
-            return res;
-        }
+        return_if_err(db_crypto_sym_get_meta(&meta));
 
-        // Add the new entry
+        // Add the new symbol
         db_crypto_sym_val_t val = {
             .sym_id = meta.last_sym_id,
             .is_local = false,
         };
-        mdb_val.mv_size = sizeof(db_crypto_sym_val_t);
-        mdb_val.mv_data = &val;
-        if(db_put(&mdb_key, &mdb_val) != DB_ERR_OK) {
-            return res;
-        }
+        mdb_val = DB_VAL(&val);
+        return_if_err(db_put(&mdb_key, &mdb_val));
 
         // Update the meta info
         meta.last_sym_id++;
-        meta.global_sym_cnt++;
         return db_crypto_sym_get_meta(&meta);
     }
-
     return res;
 }
 
 db_err_t db_crypto_sym_del_global(const char *sym_name)
 {
-    // Set key to delete
-    db_crypto_sym_key_t key = {
-        .table_id = htonl(DB_TABLE_ID_CRYPTO_SYM),
-    };
-    strncpy(key.sym_name, sym_name, DB_CRYPTO_SYM_NAME_LEN);
-    MDB_val mdb_key = {
-        .mv_size = sizeof(db_crypto_sym_key_t),
-        .mv_data = &key,
-    };
-
-    // Delete the entry
-    db_err_t res = db_del(&mdb_key);
-    if(res != DB_ERR_OK) {
-        return res;
-    }
-
-    // Update the meta info
-    db_crypto_sym_meta_val_t meta;
-    res = db_crypto_sym_get_meta(&meta);
-    if(res != DB_ERR_OK) {
-        return res;
-    }
-    meta.global_sym_cnt--;
-    return db_crypto_sym_put_meta(&meta);
+    db_crypto_sym_key_t key;
+    db_crypto_sym_key(&key, sym_name);
+    MDB_val mdb_key = DB_VAL(&key);
+    return db_del(&mdb_key);
 }
 
-db_err_t db_crypto_sym_get_list(buf_ext_t *buf, db_crypto_sym_arr_t *arr, bool is_local)
+db_err_t db_crypto_sym_get_list(db_crypto_sym_t *arr, uint32_t arr_size, uint32_t *sym_count)
 {
-    // Get the meta info
-    db_crypto_sym_meta_val_t meta;
-    db_err_t res = db_crypto_sym_get_meta(&meta);
-    if(res != DB_ERR_OK) {
-        return res;
-    }
+    db_crypto_sym_key_t key = DB_CRYPTO_SYM_KEY;
+    MDB_val mdb_val, mdb_key = DB_VAL(&key);
+    for(uint32_t i = 0; i < arr_size; i++) {
+        db_crypto_sym_t *sym = &arr[i];
+        return_if_err(db_cursor_get(&mdb_key, &mdb_val));
 
-    // Allocate space for the symbols
-    uint32_t cnt = is_local ? meta.local_sym_cnt : meta.global_sym_cnt;
-    uint32_t tot_size = cnt * sizeof(db_crypto_sym_t);
-    db_crypto_sym_t *data = buf_alloc(buf, tot_size);
-    if(data == NULL) {
-        log_error("buf_alloc(%u) failed", tot_size);
-        return DB_ERR_NO_MEM;
-    }
-    arr->data = data;
-    arr->count = 0;
-
-    // Iterate through the symbols
-    db_crypto_sym_key_t key = {
-        .table_id = htonl(DB_TABLE_ID_CRYPTO_SYM),
-    };
-    MDB_val mdb_val, mdb_key = {
-        .mv_size = sizeof(db_crypto_sym_key_t),
-        .mv_data = &key,
-    };
-    for(uint32_t i = 0; i < meta.global_sym_cnt; i++) {
-        res = db_cursor_get(&mdb_key, &mdb_val);
-        if(res != DB_ERR_OK) {
-            return res;
-        }
-        if(mdb_val.mv_size != sizeof(db_crypto_sym_val_t)) {
-            log_error("size mismatch: %zu != %zu", mdb_val.mv_size, sizeof(db_crypto_sym_val_t));
-            return DB_ERR_SIZE_MISMATCH;
-        }
         db_crypto_sym_val_t *val = mdb_val.mv_data;
-        if(is_local && val->is_local) {
-            db_crypto_sym_t *sym = &data[arr->count];
-            strncpy(sym->sym_name, key.sym_name, DB_CRYPTO_SYM_NAME_LEN);
-            memcpy(&sym->sym_id, &val->sym_id, sizeof(uint32_t));
-            sym->is_local = val->is_local;
-            arr->count++;
-        }
+        db_return_if_size(mdb_val, sizeof(db_crypto_sym_val_t));
+        memcpy(sym->sym_name, key.sym_name, DB_CRYPTO_SYM_NAME_LEN);
+        memcpy(&sym->val, val, sizeof(db_crypto_sym_val_t));
     }
-
     return DB_ERR_OK;
 }
 
 db_err_t db_crypto_sym_set_local(const char *sym_name, bool is_local)
 {
-    // Set key to add
-    db_crypto_sym_key_t key = {
-        .table_id = htonl(DB_TABLE_ID_CRYPTO_SYM),
-    };
-    strncpy(key.sym_name, sym_name, DB_CRYPTO_SYM_NAME_LEN);
-    MDB_val mdb_val, mdb_key = {
-        .mv_size = sizeof(db_crypto_sym_key_t),
-        .mv_data = &key,
-    };
-
-    // Get the entry
-    db_err_t res = db_get(&mdb_key, &mdb_val);
-    if(res != DB_ERR_OK) {
-        log_error("symbol '%s' not found", sym_name);
-        return res;
-    }
+    db_crypto_sym_key_t key;
+    db_crypto_sym_key(&key, sym_name);
+    MDB_val mdb_val, mdb_key = DB_VAL(&key);
+    return_if_err(db_get(&mdb_key, &mdb_val));
 
     // Update the entry to local
-    if(mdb_val.mv_size != sizeof(db_crypto_sym_val_t)) {
-        log_error("size mismatch: %zu != %zu", mdb_val.mv_size, sizeof(db_crypto_sym_val_t));
-        return DB_ERR_SIZE_MISMATCH;
-    }
     db_crypto_sym_val_t *val = mdb_val.mv_data;
+    db_return_if_size(mdb_val, sizeof(db_crypto_sym_val_t));
     val->is_local = is_local;
-    res = db_put(&mdb_key, &mdb_val);
-    if(res != DB_ERR_OK) {
-        return res;
-    }
-
-    // Update the meta info
-    db_crypto_sym_meta_val_t meta;
-    res = db_crypto_sym_get_meta(&meta);
-    if(res != DB_ERR_OK) {
-        return res;
-    }
-    if(is_local) {
-        meta.local_sym_cnt++;
-    } else {
-        meta.local_sym_cnt--;
-    }
-    return db_crypto_sym_put_meta(&meta);
+    return db_put(&mdb_key, &mdb_val);
 }

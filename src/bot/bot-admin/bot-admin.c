@@ -1,8 +1,7 @@
-#include <bot/bot-admin.h>
-#include <bot/bot-admin-status.h>
+#include <bot/bot-admin/bot-admin-status.h>
 #include <core/telebot/telebot.h>
 #include <core/base/log.h>
-#include <db/db-bot.h>
+#include <db/bot/db-bot.h>
 #include <inttypes.h>
 #include <ev.h>
 
@@ -14,19 +13,6 @@ typedef struct {
     ev_timer status_upd_timer;
 } bot_admin_t;
 
-static void start_cmd(const telebot_message_t *msg)
-{
-    const telebot_user_t *from = &msg->from;
-    const telebot_chat_t *chat = &msg->chat;
-    bot_chat_t bot_chat = {
-        .id = chat->id,
-    };
-    if(db_bot_chat_add(&bot_chat) != DB_ERR_OK) {
-        return;
-    }
-    log_debug("user '%s' started the chat %" PRIu64, from->first_name, chat->id);
-}
-
 #ifdef CONFIG_BOT_ADMIN_CRYPTO_PARSER
 static void crypo_parser_status_cmd(const telebot_message_t *msg)
 {
@@ -36,12 +22,6 @@ static void crypo_parser_status_cmd(const telebot_message_t *msg)
 }
 #endif
 
-static const telebot_cmd_handler_t cmd_handlers[] = {
-    { "start", start_cmd },
-#ifdef CONFIG_BOT_ADMIN_CRYPTO_PARSER
-    { "crypo_parser_status", crypo_parser_status_cmd },
-#endif
-};
 static bot_admin_t bot = { 0 };
 
 bot_admin_err_t bot_admin_init(const char *token, uint32_t upd_interval_sec)

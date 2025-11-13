@@ -2,6 +2,19 @@
 
 #include <db/db.h>
 
+#define DB_VAL(val)                                                                                                    \
+    (MDB_val)                                                                                                          \
+    {                                                                                                                  \
+        sizeof(*(val)), val                                                                                            \
+    }
+#define db_return_if_size(val, exp)                                                                                    \
+    do {                                                                                                               \
+        if(val.mv_size != exp) {                                                                                       \
+            log_error("size mismatch: %zu != %zu", val.mv_size, exp);                                                  \
+            return DB_ERR_SIZE_MISMATCH;                                                                               \
+        }                                                                                                              \
+    } while(0)
+
 typedef enum {
     DB_TABLE_ID_CRYPTO_SYM_META,
     DB_TABLE_ID_CRYPTO_SYM,

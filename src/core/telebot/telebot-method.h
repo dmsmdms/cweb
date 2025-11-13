@@ -11,6 +11,7 @@ typedef enum {
     TELEBOT_ERR_OK,          ///< No error
     TELEBOT_ERR_HTTP,        ///< HTTP request failed
     TELEBOT_ERR_INVALID_ARG, ///< Invalid argument
+    TELEBOT_ERR_INTERNAL,    ///< Internal error
     TELEBOT_ERR_MAX,
 } telebot_err_t;
 

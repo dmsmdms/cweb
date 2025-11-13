@@ -1,8 +1,14 @@
 #pragma once
 
-#include <core/db/db.h>
+#include <db/db.h>
 
 #define BOT_CHAT_ARR_BUF_SIZE 1024
+
+typedef enum {
+    DB_BOT_CHAT_CTX_NONE,
+    DB_BOT_CHAT_CTX_PASSWD,
+    DB_BOT_CHAT_CTX_MAX,
+} db_bot_chat_ctx_t;
 
 /**
  * @brief Structure to hold bot user data
@@ -19,15 +25,16 @@ typedef struct {
  * @brief Structure to hold bot chat data
  */
 typedef struct {
-    uint64_t id; ///< Unique identifier for this chat
-} bot_chat_t;
+    uint64_t id;   ///< Unique identifier for this chat
+    bool is_admin; ///< Indicates if the chat has admin privileges
+} db_bot_admin_chat_t;
 
 /**
  * @brief Structure to hold an array of bot chats
  */
 typedef struct {
-    bot_chat_t *data; ///< Pointer to array of bot chats
-    uint32_t count;   ///< Number of bot chats in the array
+    db_bot_admin_chat_t *data; ///< Pointer to array of bot chats
+    uint32_t count;            ///< Number of bot chats in the array
 } bot_chat_arr_t;
 
 /**
@@ -42,7 +49,25 @@ db_err_t db_bot_user_add(const bot_user_t *user);
  * @param chat - [in] Pointer to the bot chat data to be added
  * @return DB_ERR_OK on success, error code otherwise
  */
-db_err_t db_bot_chat_add(const bot_chat_t *chat);
+db_err_t db_bot_chat_add(const db_bot_admin_chat_t *chat);
+
+db_err_t db_bot_admin_chat_new(uint64_t chat_id);
+
+/**
+ * @brief Get a bot chat from the database by its ID
+ * @param id - [in] The ID of the bot chat to retrieve
+ * @param chat - [out] Pointer to store the retrieved bot chat data
+ * @return DB_ERR_OK on success, error code otherwise
+ */
+db_err_t db_bot_admin_chat_get_by_id(uint64_t chat_id, db_bot_admin_chat_t *chat);
+
+/**
+ * @brief Set the context for a bot chat in the database
+ * @param chat_id - [in] The ID of the bot chat
+ * @param ctx - [in] The context to be set for the bot chat
+ * @return DB_ERR_OK on success, error code otherwise
+ */
+db_err_t db_bot_chat_set_ctx(uint64_t chat_id, db_bot_chat_ctx_t ctx);
 
 /**
  * @brief Get the last update ID from the database

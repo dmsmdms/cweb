@@ -2,6 +2,17 @@
 
 #include <common.h>
 
+#define buf_alloc_or_return(buf, size, ret)                                                                            \
+    ({                                                                                                                 \
+        uint32_t tot_size = size;                                                                                      \
+        void *ptr = buf_alloc(buf, tot_size);                                                                          \
+        if(ptr == NULL) {                                                                                              \
+            log_error("buf_alloc(%u) failed", tot_size);                                                               \
+            return ret;                                                                                                \
+        }                                                                                                              \
+        ptr;                                                                                                           \
+    })
+
 /**
  * @brief Generic buffer structure
  */

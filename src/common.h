@@ -22,16 +22,12 @@
 #define ARRAY_SIZE(a)       (sizeof(a) / sizeof(a[0]))
 #define STATIC_ASSERT(cond) _Static_assert(cond, #cond)
 
-/**
- * @brief Get the container structure from a member pointer
- * @param ptr - [in] Pointer to the member
- * @param type - [in] Type of the container struct
- * @param member - [in] Name of the member within the struct
- * @return Pointer to the container structure
- */
 #define container_of(ptr, type, member) ((type *)((char *)(ptr) - offsetof(type, member)))
+#define return_if_err(func)                                                                                            \
+    do {                                                                                                               \
+        uint32_t res = func;                                                                                           \
+        if(res != 0)                                                                                                   \
+            return res;                                                                                                \
+    } while(0)
 
-/**
- * @brief Indicates whether the application is currently running
- */
 extern bool app_is_running;
